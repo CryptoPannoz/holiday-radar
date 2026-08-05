@@ -103,8 +103,9 @@ honestly — say so when you collect the address, which is what the gate does.
 
 ## Hosting
 
-Plain static files. It runs on GitHub Pages with nothing behind it — no server, no build
-step, no API keys in the code, no database of its own. The holiday data is committed as
+Plain static files — no server, no build step, no database of its own. The public site is
+<https://bebroggi.it/tools/holiday-radar/>; this repository is the source, and running it
+yourself needs nothing more than a static file server. The holiday data is committed as
 JSON and refreshed monthly by a GitHub Action, so the site never depends on a third-party
 API being up when a visitor loads it.
 

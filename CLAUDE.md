@@ -8,8 +8,8 @@ dice quando sono in vacanza i mercati che possono davvero raggiungerla.
   `alberto-broggi-site`, sotto `tools/holiday-radar/`.
 - **Questa repo** è la fonte del codice e la copia open source. Dopo ogni modifica:
   `npm run deploy:site`, poi commit e push **anche** del sito.
-- **GitHub Pages** di questa repo resta come specchio; il canonical dell'HTML punta
-  a bebroggi.it, quindi non fa concorrenza a sé stesso sui motori di ricerca.
+- **GitHub Pages di questa repo è spenta** (dal 5/8/2026): esiste un solo sito pubblico,
+  quello su bebroggi.it. Qui resta il codice, clonabile ed eseguibile in locale.
 - **Stack**: HTML + CSS + JavaScript a moduli ES. Nessun framework, nessun build step.
   Node serve solo per gli script in `scripts/`. Firebase si carica da CDN solo se
   configurato.
@@ -58,9 +58,11 @@ non si fa login.
 
 Il login fallisce con "dominio non autorizzato" su qualunque host non presente in
 Authentication → Settings → Domini autorizzati. Oggi ci sono `localhost`, `bebroggi.it`
-e `cryptopannoz.github.io`. **Attenzione: le GitHub Pages di questa repo servono una copia
-funzionante del tool**, non solo il codice — se si aggiunge un dominio (o si usa
-`127.0.0.1` invece di `localhost`, che per Firebase è un host diverso) va autorizzato lì.
+e `cryptopannoz.github.io`. Quest'ultimo è rimasto in lista ma non serve più niente: le
+GitHub Pages di questa repo sono state **spente il 5/8/2026**, perché servivano una
+seconda copia funzionante del tool e quindi una seconda porta d'ingresso alla raccolta
+contatti. Se si aggiunge un dominio — o si usa `127.0.0.1` invece di `localhost`, che per
+Firebase è un host diverso — va autorizzato lì.
 
 ## Privacy
 
