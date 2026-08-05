@@ -203,7 +203,6 @@ function wireEvents() {
   $('#email-form').addEventListener('submit', onEmailSignIn);
   $('#account-btn').addEventListener('click', onAccountButton);
 
-  if (CONTACT_URL) $('#cta-link').href = CONTACT_URL;
 }
 
 /* ---------- lingua ---------- */
@@ -342,6 +341,9 @@ function applyGate() {
   section.classList.toggle('is-locked', !state.unlocked);
   $('#gate').hidden = state.unlocked;
   $('#cta').hidden = !state.unlocked || !CONTACT_URL;
+  // L'indirizzo entra nel DOM solo a sblocco avvenuto: chi raccoglie email
+  // leggendo la pagina pubblica non lo trova, perché prima non c'è.
+  if (state.unlocked && CONTACT_URL) $('#cta-link').href = CONTACT_URL;
   // Sotto il velo la tabulazione non deve poter entrare.
   section.querySelectorAll('button, input, a').forEach((node) => {
     if (node.closest('.gate')) return;
