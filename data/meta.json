@@ -1,0 +1,293 @@
+{
+  "generatedAt": "2026-08-05",
+  "years": [
+    2026,
+    2027,
+    2028
+  ],
+  "markets": [
+    {
+      "c": "AT",
+      "name": "Austria",
+      "flag": "🇦🇹",
+      "publicCount": 45,
+      "bridgeCount": 27,
+      "schoolCount": 42,
+      "subdivisions": 9
+    },
+    {
+      "c": "BE",
+      "name": "Belgium",
+      "flag": "🇧🇪",
+      "publicCount": 42,
+      "bridgeCount": 20,
+      "schoolCount": 26,
+      "subdivisions": 0
+    },
+    {
+      "c": "BG",
+      "name": "Bulgaria",
+      "flag": "🇧🇬",
+      "publicCount": 43,
+      "bridgeCount": 21,
+      "schoolCount": 9,
+      "subdivisions": 0
+    },
+    {
+      "c": "HR",
+      "name": "Croatia",
+      "flag": "🇭🇷",
+      "publicCount": 42,
+      "bridgeCount": 22,
+      "schoolCount": 3,
+      "subdivisions": 0
+    },
+    {
+      "c": "CZ",
+      "name": "Czechia",
+      "flag": "🇨🇿",
+      "publicCount": 39,
+      "bridgeCount": 21,
+      "schoolCount": 32,
+      "subdivisions": 14
+    },
+    {
+      "c": "DK",
+      "name": "Denmark",
+      "flag": "🇩🇰",
+      "publicCount": 42,
+      "bridgeCount": 13,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "EE",
+      "name": "Estonia",
+      "flag": "🇪🇪",
+      "publicCount": 36,
+      "bridgeCount": 17,
+      "schoolCount": 9,
+      "subdivisions": 0
+    },
+    {
+      "c": "FI",
+      "name": "Finland",
+      "flag": "🇫🇮",
+      "publicCount": 45,
+      "bridgeCount": 19,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "FR",
+      "name": "France",
+      "flag": "🇫🇷",
+      "publicCount": 33,
+      "bridgeCount": 22,
+      "schoolCount": 39,
+      "subdivisions": 24
+    },
+    {
+      "c": "DE",
+      "name": "Germany",
+      "flag": "🇩🇪",
+      "publicCount": 58,
+      "bridgeCount": 16,
+      "schoolCount": 219,
+      "subdivisions": 16
+    },
+    {
+      "c": "GR",
+      "name": "Greece",
+      "flag": "🇬🇷",
+      "publicCount": 45,
+      "bridgeCount": 20,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "HU",
+      "name": "Hungary",
+      "flag": "🇭🇺",
+      "publicCount": 39,
+      "bridgeCount": 18,
+      "schoolCount": 3,
+      "subdivisions": 0
+    },
+    {
+      "c": "IE",
+      "name": "Ireland",
+      "flag": "🇮🇪",
+      "publicCount": 33,
+      "bridgeCount": 24,
+      "schoolCount": 4,
+      "subdivisions": 0
+    },
+    {
+      "c": "IT",
+      "name": "Italy",
+      "flag": "🇮🇹",
+      "publicCount": 42,
+      "bridgeCount": 19,
+      "schoolCount": 20,
+      "subdivisions": 20
+    },
+    {
+      "c": "LV",
+      "name": "Latvia",
+      "flag": "🇱🇻",
+      "publicCount": 49,
+      "bridgeCount": 20,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "LT",
+      "name": "Lithuania",
+      "flag": "🇱🇹",
+      "publicCount": 42,
+      "bridgeCount": 21,
+      "schoolCount": 11,
+      "subdivisions": 0
+    },
+    {
+      "c": "LU",
+      "name": "Luxembourg",
+      "flag": "🇱🇺",
+      "publicCount": 36,
+      "bridgeCount": 20,
+      "schoolCount": 11,
+      "subdivisions": 0
+    },
+    {
+      "c": "MT",
+      "name": "Malta",
+      "flag": "🇲🇹",
+      "publicCount": 42,
+      "bridgeCount": 28,
+      "schoolCount": 6,
+      "subdivisions": 0
+    },
+    {
+      "c": "NL",
+      "name": "Netherlands",
+      "flag": "🇳🇱",
+      "publicCount": 27,
+      "bridgeCount": 16,
+      "schoolCount": 28,
+      "subdivisions": 12
+    },
+    {
+      "c": "NO",
+      "name": "Norway",
+      "flag": "🇳🇴",
+      "publicCount": 36,
+      "bridgeCount": 15,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "PL",
+      "name": "Poland",
+      "flag": "🇵🇱",
+      "publicCount": 42,
+      "bridgeCount": 19,
+      "schoolCount": 8,
+      "subdivisions": 16
+    },
+    {
+      "c": "PT",
+      "name": "Portugal",
+      "flag": "🇵🇹",
+      "publicCount": 48,
+      "bridgeCount": 23,
+      "schoolCount": 18,
+      "subdivisions": 20
+    },
+    {
+      "c": "RO",
+      "name": "Romania",
+      "flag": "🇷🇴",
+      "publicCount": 51,
+      "bridgeCount": 20,
+      "schoolCount": 6,
+      "subdivisions": 42
+    },
+    {
+      "c": "RS",
+      "name": "Serbia",
+      "flag": "🇷🇸",
+      "publicCount": 33,
+      "bridgeCount": 14,
+      "schoolCount": 5,
+      "subdivisions": 0
+    },
+    {
+      "c": "SK",
+      "name": "Slovakia",
+      "flag": "🇸🇰",
+      "publicCount": 37,
+      "bridgeCount": 17,
+      "schoolCount": 20,
+      "subdivisions": 8
+    },
+    {
+      "c": "SI",
+      "name": "Slovenia",
+      "flag": "🇸🇮",
+      "publicCount": 45,
+      "bridgeCount": 18,
+      "schoolCount": 6,
+      "subdivisions": 2
+    },
+    {
+      "c": "ES",
+      "name": "Spain",
+      "flag": "🇪🇸",
+      "publicCount": 95,
+      "bridgeCount": 19,
+      "schoolCount": 56,
+      "subdivisions": 19
+    },
+    {
+      "c": "SE",
+      "name": "Sweden",
+      "flag": "🇸🇪",
+      "publicCount": 48,
+      "bridgeCount": 21,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "CH",
+      "name": "Switzerland",
+      "flag": "🇨🇭",
+      "publicCount": 63,
+      "bridgeCount": 8,
+      "schoolCount": 199,
+      "subdivisions": 26
+    },
+    {
+      "c": "GB",
+      "name": "United Kingdom",
+      "flag": "🇬🇧",
+      "publicCount": 40,
+      "bridgeCount": 12,
+      "schoolCount": 0,
+      "subdivisions": 0
+    }
+  ],
+  "cities": 131,
+  "sources": [
+    {
+      "name": "Nager.Date",
+      "url": "https://date.nager.at",
+      "use": "public holidays & long weekends"
+    },
+    {
+      "name": "OpenHolidays API",
+      "url": "https://openholidaysapi.org",
+      "use": "school holidays (regional)"
+    }
+  ]
+}
