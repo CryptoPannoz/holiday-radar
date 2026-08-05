@@ -142,30 +142,45 @@ export async function signOut() {
  */
 export async function recordSearch(payload) {
   if (!db || !user) return;
+  let storeMod;
   try {
-    const { storeMod } = await loadSDK();
-    const { doc, setDoc, getDoc, addDoc, collection, serverTimestamp, increment } = storeMod;
-
-    const leadRef = doc(db, LEADS_COLLECTION, user.uid);
-    const existing = await getDoc(leadRef);
-    await setDoc(
-      leadRef,
-      {
-        email: user.email || null,
-        name: user.name || null,
-        provider: user.provider || null,
-        lastSeenAt: serverTimestamp(),
-        searchCount: increment(1),
-        ...(existing.exists() ? {} : { firstSeenAt: serverTimestamp() }),
-      },
-      { merge: true },
-    );
-
-    await addDoc(collection(db, LEADS_COLLECTION, user.uid, 'searches'), {
-      ...payload,
-      at: serverTimestamp(),
-    });
+    ({ storeMod } = await loadSDK());
   } catch (err) {
-    console.warn('[holiday-radar] could not record search:', err.message);
+    console.warn('[holiday-radar] SDK non disponibile:', err.message);
+    return;
   }
+  const { doc, setDoc, getDoc, addDoc, collection, serverTimestamp, increment } = storeMod;
+  const leadRef = doc(db, LEADS_COLLECTION, user.uid);
+
+  /**
+   * La lettura serve solo a non riscrivere `firstSeenAt` a ogni ricerca, quindi
+   * è facoltativa e ha il suo try/catch. Prima era in linea con le scritture:
+   * le regole negavano ogni lettura, l'eccezione usciva dal blocco e il
+   * contatto non veniva mai salvato — un campo accessorio faceva cadere tutto.
+   */
+  let isNew = false;
+  try {
+    isNew = !(await getDoc(leadRef)).exists();
+  } catch {
+    isNew = false;
+  }
+
+  const profile = {
+    email: user.email || null,
+    name: user.name || null,
+    provider: user.provider || null,
+    lastSeenAt: serverTimestamp(),
+    searchCount: increment(1),
+  };
+  if (isNew) profile.firstSeenAt = serverTimestamp();
+
+  // Le due scritture sono indipendenti: se una fallisce l'altra deve passare.
+  const results = await Promise.allSettled([
+    setDoc(leadRef, profile, { merge: true }),
+    addDoc(collection(db, LEADS_COLLECTION, user.uid, 'searches'), { ...payload, at: serverTimestamp() }),
+  ]);
+
+  results
+    .filter((r) => r.status === 'rejected')
+    .forEach((r) => console.warn('[holiday-radar] scrittura rifiutata:', r.reason?.message || r.reason));
 }
