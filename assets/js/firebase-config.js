@@ -1,19 +1,16 @@
 /**
- * Configurazione Firebase — DA COMPILARE.
+ * Configurazione Firebase del progetto `str-holiday-radar`.
  *
- * Finché `apiKey` e `projectId` sono vuoti il sito funziona lo stesso: il
- * cancello mostra "Continue without signing in" e nessuno viene tracciato.
- * Appena incolli qui i valori del tuo progetto, il login diventa reale.
+ * Se questi campi tornassero vuoti, il cancello dichiara che l'accesso non è
+ * attivo e rimanda alla repo: non si apre comunque.
  *
- * Come ottenerli (5 minuti, servono i tuoi account Google — non posso farlo io):
- *   1. console.firebase.google.com → Add project → chiamalo "holiday-radar"
- *   2. Build → Authentication → Get started → abilita "Google" e "Email link
- *      (passwordless sign-in)"
- *   3. Build → Firestore Database → Create database → modalità produzione
- *   4. Project settings → General → Your apps → Web (</>) → registra l'app
- *      e copia qui l'oggetto firebaseConfig
- *   5. Authentication → Settings → Authorized domains → aggiungi
- *      "cryptopannoz.github.io"
+ * Configurato il 5 agosto 2026 sul progetto `str-holiday-radar`: app web
+ * registrata, provider Google ed Email link attivi, Firestore creato con le
+ * regole del README, dominio `bebroggi.it` autorizzato.
+ *
+ * Se un giorno servisse un dominio nuovo, va aggiunto in
+ * Authentication → Settings → Domini autorizzati, altrimenti il login parte
+ * e fallisce con "dominio non autorizzato".
  *
  * Queste chiavi NON sono segrete: le API key web di Firebase identificano il
  * progetto, non autorizzano nulla. Ciò che protegge i dati sono le regole di
@@ -21,10 +18,10 @@
  */
 
 export const firebaseConfig = {
-  apiKey: '',
+  apiKey: 'AIzaSyCs2JNz5BkSBvQ80r9DDm6lALlglfAx-eg',
   authDomain: 'str-holiday-radar.firebaseapp.com',
   projectId: 'str-holiday-radar',
-  appId: '',
+  appId: '1:671920042026:web:121ff2524ce29ed9a5d353',
 };
 
 /** Collezione dove finiscono i contatti raccolti. */
