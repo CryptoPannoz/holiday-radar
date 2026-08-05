@@ -111,7 +111,7 @@ function mergeSchool(entries) {
 
 async function buildCountry(country) {
   const { c } = country;
-  const out = { country: c, name: country.name, flag: country.flag, public: [], bridges: [], school: [], subdivisions: [] };
+  const out = { country: c, name: country.name, nameEn: country.nameEn, flag: country.flag, public: [], bridges: [], school: [], subdivisions: [] };
 
   for (const year of years) {
     const [pub, lw] = await Promise.all([
@@ -158,6 +158,7 @@ async function main() {
       index.push({
         c: r.country,
         name: r.name,
+        nameEn: r.nameEn,
         flag: r.flag,
         publicCount: r.public.length,
         bridgeCount: r.bridges.length,

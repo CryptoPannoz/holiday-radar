@@ -40,15 +40,30 @@ weeks ahead with a note on what to do about each, and exports.
 
 ## Sign-in, and what I keep
 
-The tool is free and stays free. Signing in with Google or an email link unlocks the
-results, and it exists for one reason: so I know who finds this useful and can tell them
-when it gets better. I keep the email address and the searches run — property location,
-radii, horizon, markets. Nothing else, nothing sold on.
+The tool is free and stays free, but the results are behind a sign-in: Google or an email
+link. That exists for one reason — so I know who finds this useful and can tell them when
+it gets better. I keep the email address and the searches run (property location, radii,
+horizon, markets). Nothing else, nothing sold on.
+
+**There is no "continue without an account" button.** If you would rather not sign in, the
+whole thing is open source: clone this repository and run it yourself, no sign-in and no
+limits. That is the deliberate alternative, and the gate says so.
 
 **The blur over the results is not a security measure.** The data is already in the page
 and anyone who opens developer tools can read it. It is an invitation to say hello, not a
-lock. If you would rather not, clone this repository and run it yourself — no sign-in, no
-limits, that is the point of it being open source.
+lock — which is exactly why the escape hatch above is the honest one.
+
+Until the Firebase config below is filled in, sign-in cannot work at all: the gate then
+says so plainly and points at the repository, rather than pretending to accept a login.
+
+## Languages
+
+Italian and English, switched from the toggle in the header. The choice is remembered in
+the browser and travels in the URL (`?lang=en`), so a shared link opens in the language it
+was shared in. Country and city names are translated in the data itself
+(`scripts/geo-source.mjs` carries `nameEn` / `nEn`), and dates follow the chosen locale.
+Adding a third language means adding one block to `assets/js/i18n.js` and one name field
+per country.
 
 ### Turning sign-in on
 

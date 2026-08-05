@@ -22,6 +22,7 @@ import {
 import { toCSV, toICS, download, slug } from './export.js';
 import * as auth from './auth.js';
 import { CONTACT_URL, TOP_WEEKS, DEFAULT_HORIZON_MONTHS } from './config.js';
+import { t, setLang, getLang, detectLang, applyStatic, locale, localName, LANGS } from './i18n.js';
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, className, text) => {
@@ -70,9 +71,9 @@ const fmtPeople = (thousands) => {
 };
 
 const fmtDay = (iso) =>
-  parseDate(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  parseDate(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const fmtDayYear = (iso) =>
-  parseDate(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  parseDate(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 const monthValue = (date) => date.toISOString().slice(0, 7);
 const monthStart = (value) => `${value}-01`;
@@ -85,21 +86,26 @@ const addMonths = (value, n) => {
   return monthValue(new Date(Date.UTC(y, m - 1 + n, 1)));
 };
 
-const marketName = (code) => state.meta?.markets.find((m) => m.c === code)?.name || code;
+const marketName = (code) => localName(state.meta?.markets.find((m) => m.c === code)) || code;
+const cityName = (city) => localName(city) || city?.n || '';
 const marketFlag = (code) => state.meta?.markets.find((m) => m.c === code)?.flag || '';
 
 /* ---------- avvio ---------- */
 
 async function init() {
+  setLang(detectLang());
+  applyStatic();
   wireEvents();
+  wireLanguage();
   setupHorizonDefaults();
+  renderFlyLabels();
 
   try {
     [state.meta, state.cities, state.airports] = await Promise.all([loadMeta(), loadCities(), loadAirports()]);
-    $('#data-stamp').textContent = `Dati aggiornati al ${state.meta.generatedAt}.`;
+    $('#data-stamp').textContent = t('footer.stamp', { date: state.meta.generatedAt });
     clampHorizonToData();
   } catch (err) {
-    showError(`Non riesco a caricare l'archivio delle vacanze. ${err.message}`);
+    showError(t('err.loadDb', { msg: err.message }));
     return;
   }
 
@@ -131,7 +137,7 @@ function clampHorizonToData() {
   $('#horizon-to').max = max;
   if (state.from < min) state.from = $('#horizon-from').value = min;
   if (state.to > max) state.to = $('#horizon-to').value = max;
-  $('#horizon-note').textContent = `Dati disponibili fino a tutto il ${years[years.length - 1]}.`;
+  $('#horizon-note').textContent = t('step4.note', { year: years[years.length - 1] });
 }
 
 function wireEvents() {
@@ -143,7 +149,7 @@ function wireEvents() {
   });
 
   $('#use-example').addEventListener('click', () =>
-    setProperty({ label: 'Villa Volpe', detail: 'Orta San Giulio, Piemonte', lat: 45.7975, lon: 8.4186 }),
+    setProperty({ label: 'Villa Volpe', detail: t('badge.exampleDetail'), lat: 45.7975, lon: 8.4186 }),
   );
   $('#use-locate').addEventListener('click', onLocate);
 
@@ -155,10 +161,7 @@ function wireEvents() {
   });
   $('#fly-range').addEventListener('input', (e) => {
     state.maxFly = Number(e.target.value);
-    $('#fly-out').textContent = state.maxFly ? `${state.maxFly.toLocaleString('it-IT')} km` : 'spento';
-    $('#fly-note').textContent = state.maxFly
-      ? `In linea d'aria — circa ${fmtHours(flightHours(state.maxFly))} porta a porta.`
-      : 'Mercati aerei esclusi.';
+    renderFlyLabels();
     drawRadii();
     scheduleRadiusUpdate();
   });
@@ -198,10 +201,55 @@ function wireEvents() {
 
   $('#signin-google').addEventListener('click', onGoogleSignIn);
   $('#email-form').addEventListener('submit', onEmailSignIn);
-  $('#gate-skip').addEventListener('click', () => unlock({ signedIn: false }));
   $('#account-btn').addEventListener('click', onAccountButton);
 
   if (CONTACT_URL) $('#cta-link').href = CONTACT_URL;
+}
+
+/* ---------- lingua ---------- */
+
+function wireLanguage() {
+  document.querySelectorAll('.lang-switch button').forEach((btn) => {
+    btn.addEventListener('click', () => switchLanguage(btn.dataset.lang));
+  });
+  markActiveLanguage();
+}
+
+function markActiveLanguage() {
+  document.querySelectorAll('.lang-switch button').forEach((btn) => {
+    const on = btn.dataset.lang === getLang();
+    btn.classList.toggle('is-on', on);
+    btn.setAttribute('aria-pressed', String(on));
+  });
+}
+
+/**
+ * Cambiare lingua non ricarica la pagina: si riscrive il testo fisso e si
+ * ridisegna tutto quello che il codice ha generato. Ricaricare farebbe perdere
+ * i tempi di guida già misurati e costringerebbe a rifare la chiamata al router.
+ */
+function switchLanguage(lang) {
+  if (!LANGS.includes(lang) || lang === getLang()) return;
+  setLang(lang);
+  applyStatic();
+  markActiveLanguage();
+  renderFlyLabels();
+  $('#drive-out').textContent = fmtHours(state.maxDrive);
+  if (state.meta) {
+    $('#data-stamp').textContent = t('footer.stamp', { date: state.meta.generatedAt });
+    clampHorizonToData();
+  }
+  if (!auth.isConfigured()) $('#gate-lede').textContent = t('gate.ledeUnavailable');
+  if (state.property) render();
+  persistState();
+}
+
+/** Etichetta e nota del cursore volo: dipendono sia dal valore sia dalla lingua. */
+function renderFlyLabels() {
+  $('#fly-out').textContent = state.maxFly ? `${state.maxFly.toLocaleString(locale())} km` : t('step3.off');
+  $('#fly-note').textContent = state.maxFly
+    ? t('step3.noteEst', { h: fmtHours(flightHours(state.maxFly)) })
+    : t('step3.noteOff');
 }
 
 /* ---------- autenticazione ---------- */
@@ -209,10 +257,10 @@ function wireEvents() {
 async function initAuth() {
   const configured = auth.isConfigured();
   if (!configured) {
-    // Firebase non ancora collegato: il tool non deve risultare rotto per questo.
-    $('#gate-fallback').hidden = false;
-    $('#gate-lede').textContent =
-      'L\'accesso non è ancora attivo su questa installazione: è tutto aperto, procedi pure.';
+    // Firebase non ancora collegato. Non si apre comunque il cancello: chi vuole
+    // usare lo strumento senza account ha la via dichiarata, la repo su GitHub.
+    // Il messaggio dice com'è la situazione invece di far cliccare a vuoto.
+    $('#gate-lede').textContent = t('gate.ledeUnavailable');
     $('#signin-google').disabled = true;
     $('#email-form').hidden = true;
     $('#account-btn').hidden = true;
@@ -221,11 +269,11 @@ async function initAuth() {
   auth.onUserChange((user) => {
     if (user) {
       unlock({ signedIn: true });
-      $('#account-btn').textContent = user.email ? user.email.split('@')[0] : 'Accesso fatto';
-      $('#account-btn').title = `Accesso come ${user.email || 'sconosciuto'} — clicca per uscire`;
+      $('#account-btn').textContent = user.email ? user.email.split('@')[0] : t('nav.signedIn');
+      $('#account-btn').title = t('nav.signoutTitle', { email: user.email || '—' });
     } else {
       state.unlocked = false;
-      $('#account-btn').textContent = 'Accedi';
+      $('#account-btn').textContent = t('nav.signin');
       $('#account-btn').title = '';
       applyGate();
     }
@@ -234,7 +282,7 @@ async function initAuth() {
 }
 
 async function onGoogleSignIn() {
-  setGateStatus('Apro Google…');
+  setGateStatus(t('gate.opening'));
   try {
     await auth.signInWithGoogle();
   } catch (err) {
@@ -246,10 +294,10 @@ async function onEmailSignIn(e) {
   e.preventDefault();
   const email = $('#email-input').value.trim();
   if (!email) return;
-  setGateStatus('Invio…');
+  setGateStatus(t('gate.sending'));
   try {
     await auth.sendEmailLink(email);
-    setGateStatus(`Link inviato a ${email}. Aprilo su questo dispositivo e sei dentro.`);
+    setGateStatus(t('gate.linkSent', { email }));
   } catch (err) {
     setGateStatus(friendlyAuthError(err), true);
   }
@@ -257,11 +305,11 @@ async function onEmailSignIn(e) {
 
 function friendlyAuthError(err) {
   const code = err?.code || '';
-  if (code.includes('unauthorized-domain')) return 'Questo dominio non è ancora autorizzato nel progetto Firebase.';
-  if (code.includes('operation-not-allowed')) return 'Questo metodo di accesso non è abilitato nel progetto Firebase.';
-  if (code.includes('invalid-email')) return 'Questo indirizzo email non sembra valido.';
-  if (code.includes('network')) return 'Problema di rete — controlla la connessione e riprova.';
-  return err?.message || 'Accesso non riuscito.';
+  if (code.includes('unauthorized-domain')) return t('auth.badDomain');
+  if (code.includes('operation-not-allowed')) return t('auth.notEnabled');
+  if (code.includes('invalid-email')) return t('auth.badEmail');
+  if (code.includes('network')) return t('auth.network');
+  return err?.message || t('auth.failed');
 }
 
 function setGateStatus(message, isError = false) {
@@ -337,7 +385,7 @@ function initMap() {
     const { lat, lng: lon } = e.latlng;
     const place = (await reverseGeocode(lat, lon)) || {
       label: `${lat.toFixed(3)}, ${lon.toFixed(3)}`,
-      detail: 'punto sulla mappa',
+      detail: t('badge.dropped'),
       lat,
       lon,
     };
@@ -412,7 +460,7 @@ function drawCities() {
         fillOpacity: 0.5,
         weight: 1,
       }).bindTooltip(
-        `<b>${city.n}</b><br>${
+        `<b>${cityName(city)}</b><br>${
           drive
             ? `${fmtHours(city.driveH)} drive`
             : `${Math.round(city.crowKm)} km flight · ~${fmtHours(city.flightH)} door to door`
@@ -526,10 +574,10 @@ async function onSubmit(e) {
   hideSuggestions();
   const query = $('#address').value.trim();
   if (!query) return;
-  setBusy(true, 'Cerco…');
+  setBusy(true, t('busy.finding'));
   try {
     const results = await geocode(query, { limit: 1 });
-    if (!results.length) throw new Error('Nessun luogo corrisponde a questo indirizzo. Prova ad aggiungere il comune o la nazione.');
+    if (!results.length) throw new Error(t('err.noPlace'));
     await setProperty(results[0]);
   } catch (err) {
     showError(err.message);
@@ -538,16 +586,16 @@ async function onSubmit(e) {
 }
 
 function onLocate() {
-  if (!navigator.geolocation) return showError('Questo browser non può condividere la posizione.');
-  setBusy(true, 'Localizzo…');
+  if (!navigator.geolocation) return showError(t('err.noGeo'));
+  setBusy(true, t('busy.locating'));
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
-      const place = (await reverseGeocode(lat, lon)) || { label: 'La mia posizione', detail: '', lat, lon };
+      const place = (await reverseGeocode(lat, lon)) || { label: t('badge.myLocation'), detail: '', lat, lon };
       await setProperty(place);
     },
     () => {
-      showError('Permesso di geolocalizzazione negato.');
+      showError(t('err.geoDenied'));
       setBusy(false);
     },
     { timeout: 10000 },
@@ -559,7 +607,7 @@ function onLocate() {
 async function setProperty(place, { silent = false } = {}) {
   state.property = place;
   showError(null);
-  setBusy(true, 'Misuro…');
+  setBusy(true, t('busy.measuring'));
 
   try {
     state.driveHours = await driveTimes(place, state.cities);
@@ -597,11 +645,11 @@ function renderPropertyBadge() {
   badge.appendChild(el('span', null, state.property.detail || `${state.property.lat.toFixed(3)}, ${state.property.lon.toFixed(3)}`));
   if (state.nearAirports[0]) {
     badge.appendChild(
-      el('span', null, `Aeroporto più vicino: ${state.nearAirports[0].i} · ${Math.round(state.nearAirports[0].crowKm)} km`),
+      el('span', null, t('badge.airport', { code: state.nearAirports[0].i, km: Math.round(state.nearAirports[0].crowKm) })),
     );
   }
   if (state.routingEstimated) {
-    badge.appendChild(el('span', 'muted', 'Servizio percorsi non raggiungibile — tempi di guida stimati.'));
+    badge.appendChild(el('span', 'muted', t('badge.estimated')));
   }
 }
 
@@ -736,12 +784,12 @@ function renderSummary() {
   const schoolWeeks = state.weeks.filter((w) => [...w.byCountry.values()].some((c) => c.schoolCoverage > 0)).length;
 
   const stats = [
-    [String(state.selected.size), 'mercati scelti'],
-    [fmtPeople(drivePop), `persone entro ${fmtHours(state.maxDrive)} di auto`],
-    [fmtPeople(flyPop), `in più entro ${state.maxFly.toLocaleString('it-IT')} km di volo`],
-    [String(state.events.length), 'date nel periodo'],
-    [String(schoolWeeks), 'settimane con vacanze scolastiche'],
-    [best ? fmtDay(best.start) : '—', best ? `settimana migliore · punteggio ${best.scorePct}` : 'nessuna settimana con punteggio'],
+    [String(state.selected.size), t('stats.markets')],
+    [fmtPeople(drivePop), t('stats.drive', { h: fmtHours(state.maxDrive) })],
+    [fmtPeople(flyPop), t('stats.fly', { km: state.maxFly.toLocaleString(locale()) })],
+    [String(state.events.length), t('stats.dates')],
+    [String(schoolWeeks), t('stats.schoolWeeks')],
+    [best ? fmtDay(best.start) : '—', best ? t('stats.bestWeek', { n: best.scorePct }) : t('stats.noWeek')],
   ];
 
   for (const [value, label] of stats) {
@@ -768,7 +816,7 @@ function monthSpans() {
   while (cursor <= state.to) {
     spans.push({
       value: cursor,
-      label: parseDate(monthStart(cursor)).toLocaleDateString('it-IT', { month: 'short', timeZone: 'UTC' }),
+      label: parseDate(monthStart(cursor)).toLocaleDateString(locale(), { month: 'short', timeZone: 'UTC' }),
       year: cursor.slice(2, 4),
       start: monthStart(cursor),
       end: monthEnd(cursor),
@@ -783,7 +831,7 @@ function renderTimeline() {
   wrap.textContent = '';
 
   if (!state.selected.size) {
-    wrap.appendChild(el('p', 'view-empty', 'Scegli almeno un mercato per vedere il calendario.'));
+    wrap.appendChild(el('p', 'view-empty', t('timeline.empty')));
     return;
   }
 
@@ -812,11 +860,11 @@ function renderTimeline() {
     bar.style.width = `${(7 / totalDays) * 100}%`;
     bar.style.bottom = '0';
     bar.style.height = `${Math.max(2, week.scorePct)}%`;
-    bar.title = `Settimana del ${fmtDayYear(week.start)} — punteggio domanda ${week.scorePct}/100`;
+    bar.title = t('timeline.weekTip', { date: fmtDayYear(week.start), n: week.scorePct });
     demand.appendChild(bar);
   }
   board.appendChild(demand);
-  board.appendChild(el('div', 'tl-demand-label', 'Punteggio settimanale della domanda — quanta parte del tuo mercato raggiungibile è ferma'));
+  board.appendChild(el('div', 'tl-demand-label', t('timeline.demand')));
 
   // una corsia per mercato, ordinata per peso
   const codes = [...state.selected].sort(
@@ -831,7 +879,7 @@ function renderTimeline() {
     label.append(`${marketFlag(code)} ${marketName(code)} `);
     const reach = state.reach.byCountry.get(code);
     label.appendChild(el('span', 'tl-reach', reach ? fmtPeople(reach.reach) : ''));
-    label.title = `${marketName(code)} — bacino ponderato ${reach ? fmtPeople(reach.reach) : '0'}`;
+    label.title = t('timeline.reachTip', { market: marketName(code), reach: reach ? fmtPeople(reach.reach) : '0' });
 
     // Una riga senza barre viola non significa "qui non vanno in vacanza": spesso
     // significa che la fonte non ha ancora pubblicato quel calendario scolastico.
@@ -878,10 +926,10 @@ function renderTimeline() {
 
   const key = el('div', 'tl-key');
   for (const [cls, text] of [
-    ['k-public', 'festività'],
-    ['k-school', 'vacanza scolastica (più sottile = meno regioni)'],
-    ['k-bridge', 'ponte'],
-    ['k-demand', 'punteggio settimanale'],
+    ['k-public', t('key.public')],
+    ['k-school', t('key.school')],
+    ['k-bridge', t('key.bridge')],
+    ['k-demand', t('key.demand')],
   ]) {
     const span = el('span');
     span.appendChild(el('i', `key-swatch ${cls}`));
@@ -902,16 +950,16 @@ function schoolGapFor(code) {
   if (!market) return null;
   if (state.events.some((ev) => ev.c === code && ev.type === 'school')) return null;
   if (!market.school.length) {
-    return `Per ${marketName(code)} non esistono dati sulle vacanze scolastiche: solo festività nazionali.`;
+    return t('gap.none', { market: marketName(code) });
   }
-  return `Le date scolastiche di ${marketName(code)} non sono ancora pubblicate così avanti. Le festività invece sono complete.`;
+  return t('gap.late', { market: marketName(code) });
 }
 
 function tooltipFor(ev) {
   const when = ev.start === ev.end ? fmtDayYear(ev.start) : `${fmtDayYear(ev.start)} → ${fmtDayYear(ev.end)}`;
   const who = ev.regions.length
-    ? `${ev.regions.length} region${ev.regions.length > 1 ? 'i' : 'e'}: ${ev.regions.slice(0, 8).join(', ')}${ev.regions.length > 8 ? '…' : ''}`
-    : 'tutto il paese';
+    ? `${ev.regions.length > 1 ? t('tip.regions', { n: ev.regions.length }) : t('tip.region')}: ${ev.regions.slice(0, 8).join(', ')}${ev.regions.length > 8 ? '…' : ''}`
+    : t('tip.nationwide');
   return `${marketName(ev.c)} · ${ev.type}\n${ev.name}\n${when}\n${who}`;
 }
 
@@ -923,7 +971,7 @@ function renderWeekCards() {
   const best = topWeeks(state.weeks, TOP_WEEKS);
 
   if (!best.length) {
-    box.appendChild(el('p', 'view-empty', 'Nessuna settimana con punteggio in questo periodo.'));
+    box.appendChild(el('p', 'view-empty', t('card.noWeeks')));
     return;
   }
 
@@ -940,15 +988,20 @@ function renderWeekCards() {
 
     const who = el('p', 'wk-who');
     if (off.length) {
-      who.append('Fermi: ');
+      who.append(t('card.off'));
       off.forEach(([code, cell], i) => {
-        const label = cell.schoolCoverage > 0 ? `${Math.round(cell.schoolCoverage * 100)}% scuole` : cell.bridge ? 'ponte' : 'festività';
+        const label =
+        cell.schoolCoverage > 0
+          ? t('card.schools', { n: Math.round(cell.schoolCoverage * 100) })
+          : cell.bridge
+            ? t('card.bridge')
+            : t('card.holiday');
         const strong = el('b', null, `${marketFlag(code)} ${marketName(code)}`);
         who.appendChild(strong);
         who.append(` (${label})${i < off.length - 1 ? ', ' : ''}`);
       });
     } else {
-      who.append('Niente in programma.');
+      who.append(t('card.nothing'));
     }
     card.appendChild(who);
 
@@ -963,7 +1016,7 @@ function renderWeekCards() {
  * nessuno. Conta chi porta il valore, non quanti sono in vacanza.
  */
 function weekAdvice(week, off) {
-  if (!off.length) return 'Niente in programma: settimana da riempire con qualcosa che non siano le vacanze.';
+  if (!off.length) return t('advice.nothing');
 
   const total = off.reduce((sum, [, cell]) => sum + cell.value, 0) || 1;
   const [topCode, topCell] = off[0];
@@ -971,15 +1024,15 @@ function weekAdvice(week, off) {
   const strong = off.filter(([, cell]) => cell.intensity >= 0.5).length;
 
   if (share >= 0.5) {
-    return `Questa settimana la traina da solo un mercato: ${marketName(topCode)}. Vale una campagna mirata.`;
+    return t('advice.single', { market: marketName(topCode) });
   }
   if (strong >= 4) {
-    return `${strong} mercati sono fermi insieme: qui tieni la tariffa invece di scontare.`;
+    return t('advice.strong', { n: strong });
   }
   if (strong >= 2) {
-    return `${strong} mercati si sovrappongono: buona settimana per imporre un soggiorno minimo.`;
+    return t('advice.overlap', { n: strong });
   }
-  return 'Solo vacanze parziali: assomiglia a una settimana normale più di quanto sembri.';
+  return t('advice.partial');
 }
 
 /* -- elenco date -- */
@@ -987,20 +1040,20 @@ function weekAdvice(week, off) {
 const MAX_LIST_ROWS = 500;
 
 /** Le etichette dei tipi di evento mostrate all'utente. */
-const TYPE_LABEL = { public: 'festività', school: 'scuole', bridge: 'ponte' };
+const typeLabel = (type) => t(`type.${type}`);
 
 function renderList() {
   const view = $('#view-list');
   view.textContent = '';
   if (!state.events.length) {
-    view.appendChild(el('p', 'view-empty', 'Nessuna data in questo periodo per i mercati scelti.'));
+    view.appendChild(el('p', 'view-empty', t('list.empty')));
     return;
   }
 
   const table = el('table', 'data');
   const thead = el('thead');
   const hr = el('tr');
-  ['Mercato', 'Tipo', 'Date', 'Notti', 'Cosa', 'Quota ferma', 'Regioni'].forEach((h) => hr.appendChild(el('th', null, h)));
+  ['market', 'type', 'dates', 'nights', 'what', 'share', 'regions'].forEach((k) => hr.appendChild(el('th', null, t(`list.h.${k}`))));
   thead.appendChild(hr);
   table.appendChild(thead);
 
@@ -1010,13 +1063,13 @@ function renderList() {
     const tr = el('tr');
     tr.appendChild(el('td', null, `${marketFlag(ev.c)} ${marketName(ev.c)}`));
     const typeCell = el('td');
-    typeCell.appendChild(el('span', `tag tag-${ev.type}`, TYPE_LABEL[ev.type] || ev.type));
+    typeCell.appendChild(el('span', `tag tag-${ev.type}`, typeLabel(ev.type)));
     tr.appendChild(typeCell);
     tr.appendChild(el('td', 'nowrap', ev.start === ev.end ? fmtDay(ev.start) : `${fmtDay(ev.start)} → ${fmtDay(ev.end)}`));
     tr.appendChild(el('td', 'num', ev.nights ? String(ev.nights) : '—'));
     tr.appendChild(el('td', null, ev.name));
     tr.appendChild(el('td', 'num', `${Math.round(ev.coverage * 100)}%`));
-    tr.appendChild(el('td', 'regions', ev.regions.length ? ev.regions.join(', ') : 'tutto il paese'));
+    tr.appendChild(el('td', 'regions', ev.regions.length ? ev.regions.join(', ') : t('tip.nationwide')));
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
@@ -1024,7 +1077,7 @@ function renderList() {
 
   if (rows.length > MAX_LIST_ROWS) {
     view.appendChild(
-      el('p', 'note', `Mostro le prime ${MAX_LIST_ROWS} date su ${rows.length} — l'esportazione le contiene tutte.`),
+      el('p', 'note', t('list.showing', { shown: MAX_LIST_ROWS, total: rows.length })),
     );
   }
 }
@@ -1039,7 +1092,7 @@ function renderMarkets() {
     .filter((m) => m.access !== 'out' || state.selected.has(m.c))
     .sort((a, b) => b.reach - a.reach);
   if (!rows.length) {
-    view.appendChild(el('p', 'view-empty', 'Allarga il raggio per intercettare dei mercati.'));
+    view.appendChild(el('p', 'view-empty', t('mk.empty')));
     return;
   }
   const maxReach = rows[0].reach || 1;
@@ -1047,8 +1100,8 @@ function renderMarkets() {
   const table = el('table', 'data');
   const thead = el('thead');
   const hr = el('tr');
-  ['Mercato', 'Città più vicina', 'Auto', 'Aereo', 'In auto', 'In aereo', 'Bacino ponderato'].forEach((h) =>
-    hr.appendChild(el('th', null, h)),
+  ['market', 'nearest', 'drive', 'flight', 'byCar', 'byAir', 'reach'].forEach((k) =>
+    hr.appendChild(el('th', null, t(`mk.h.${k}`))),
   );
   thead.appendChild(hr);
   table.appendChild(thead);
@@ -1057,7 +1110,7 @@ function renderMarkets() {
   for (const m of rows) {
     const tr = el('tr');
     tr.appendChild(el('td', null, `${marketFlag(m.c)} ${marketName(m.c)}`));
-    tr.appendChild(el('td', null, m.nearest ? m.nearest.n : '—'));
+    tr.appendChild(el('td', null, m.nearest ? cityName(m.nearest) : '—'));
     tr.appendChild(el('td', 'num', fmtHours(m.bestDriveH)));
     tr.appendChild(
       el('td', 'num', isFinite(m.bestCrowKm) ? `${Math.round(m.bestCrowKm)} km · ${fmtHours(flightHours(m.bestCrowKm))}` : '—'),
@@ -1081,9 +1134,7 @@ function renderMarkets() {
     el(
       'p',
       'note',
-      'Il bacino ponderato sconta le persone in base a quanto è faticoso raggiungerti: chi sta a due ore conta quasi per intero, ' +
-        `chi sta a otto ore conta circa un quinto, e chi deve volare conta al massimo il ${Math.round(FLY_WEIGHT * 100)}%. ` +
-        'Serve a ordinare i mercati fra loro, non è una previsione di prenotazioni.',
+      t('mk.note', { pct: Math.round(FLY_WEIGHT * 100) }),
     ),
   );
 }
@@ -1116,7 +1167,7 @@ function buildRows() {
 function exportAs(format) {
   if (!state.unlocked) return;
   const rows = buildRows();
-  if (!rows.length) return showError('Non c\'è ancora niente da esportare.');
+  if (!rows.length) return showError(t('err.nothingExport'));
   const name = `holiday-radar-${slug(state.property.label)}-${state.from}-to-${state.to}`;
 
   if (format === 'csv') download(`${name}.csv`, toCSV(rows), 'text/csv');
@@ -1145,7 +1196,14 @@ function exportAs(format) {
 /* ---------- persistenza ---------- */
 
 function persistState() {
-  if (!state.property) return;
+  // La lingua sta nell'URL anche prima che ci sia una casa: un link condiviso
+  // deve aprirsi nella lingua di chi lo ha mandato.
+  if (!state.property) {
+    const only = new URLSearchParams(location.search);
+    only.set('lang', getLang());
+    history.replaceState(null, '', `?${only}${location.hash}`);
+    return;
+  }
   const payload = {
     label: state.property.label,
     detail: state.property.detail,
@@ -1169,6 +1227,7 @@ function persistState() {
     fly: String(state.maxFly),
     from: state.from,
     to: state.to,
+    lang: getLang(),
   });
   history.replaceState(null, '', `?${params}${location.hash}`);
 }
@@ -1182,7 +1241,7 @@ function applySaved(saved) {
   if (Number.isFinite(saved.fly)) {
     state.maxFly = saved.fly;
     $('#fly-range').value = String(saved.fly);
-    $('#fly-out').textContent = saved.fly ? `${saved.fly.toLocaleString('it-IT')} km` : 'spento';
+    renderFlyLabels();
   }
   if (saved.from) {
     state.from = saved.from;
@@ -1201,7 +1260,7 @@ function readStateFromURL() {
   const lon = Number(params.get('lon'));
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || (!lat && !lon)) return null;
   const saved = {
-    label: params.get('label') || 'Casa salvata',
+    label: params.get('label') || t('badge.saved'),
     detail: '',
     lat,
     lon,
@@ -1239,7 +1298,7 @@ function readStateFromStorage() {
 function setBusy(busy, message) {
   const btn = $('#search-btn');
   btn.disabled = busy;
-  btn.textContent = busy ? message || 'Attendo…' : 'Vai';
+  btn.textContent = busy ? message || t('busy.working') : t('step1.go');
   if (busy) {
     btn.prepend(el('i', 'spinner'));
     showError(null);

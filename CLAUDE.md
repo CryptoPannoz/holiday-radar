@@ -13,9 +13,10 @@ dice quando sono in vacanza i mercati che possono davvero raggiungerla.
 - **Stack**: HTML + CSS + JavaScript a moduli ES. Nessun framework, nessun build step.
   Node serve solo per gli script in `scripts/`. Firebase si carica da CDN solo se
   configurato.
-- **Lingua dell'interfaccia**: italiano (`lang="it"`, date con locale `it-IT`, nomi di
-  paesi e città in italiano dentro `scripts/geo-source.mjs`). Anche i commenti nel
-  codice sono in italiano.
+- **Lingue**: italiano e inglese, con interruttore in alto. Le stringhe stanno in
+  `assets/js/i18n.js`; il testo fisso è marcato `data-i18n` nell'HTML, quello generato
+  passa da `t()`. Nomi di paesi e città hanno `nameEn`/`nEn` nei dati. I commenti nel
+  codice restano in italiano.
 
 ## Il flusso, in ordine
 
@@ -44,6 +45,11 @@ non si fa login.
   un host prende decisioni di prezzo su questi numeri e deve sapere cosa sono.
 - **Il velo sui risultati è CSS, non sicurezza.** I dati sono già nel DOM. È scritto nel
   cancello e nel README; non spacciarlo per protezione.
+- **Niente scorciatoia "continua senza accedere".** È stata tolta di proposito: chi non
+  vuole registrarsi clona la repo. Se Firebase non è configurato il cancello lo dice e
+  resta chiuso — non riaprirlo "per comodità".
+- **Mai sostituire l'innerHTML di un contenitore che contiene bottoni o campi** quando si
+  traduce: si portano via i gestori di eventi. Si marca solo il pezzo di testo.
 - **Assenza di dato ≠ assenza di vacanze.** Dove la fonte non copre un calendario
   scolastico compare un `?` con la spiegazione. Non rimuoverlo: una riga vuota letta come
   "lì non vanno in vacanza" è un errore che costa soldi a chi usa il tool.

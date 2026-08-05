@@ -9,6 +9,7 @@
     {
       "c": "AT",
       "name": "Austria",
+      "nameEn": "Austria",
       "flag": "🇦🇹",
       "publicCount": 45,
       "bridgeCount": 27,
@@ -18,6 +19,7 @@
     {
       "c": "BE",
       "name": "Belgio",
+      "nameEn": "Belgium",
       "flag": "🇧🇪",
       "publicCount": 42,
       "bridgeCount": 20,
@@ -27,6 +29,7 @@
     {
       "c": "BG",
       "name": "Bulgaria",
+      "nameEn": "Bulgaria",
       "flag": "🇧🇬",
       "publicCount": 43,
       "bridgeCount": 21,
@@ -36,6 +39,7 @@
     {
       "c": "HR",
       "name": "Croazia",
+      "nameEn": "Croatia",
       "flag": "🇭🇷",
       "publicCount": 42,
       "bridgeCount": 22,
@@ -45,6 +49,7 @@
     {
       "c": "DK",
       "name": "Danimarca",
+      "nameEn": "Denmark",
       "flag": "🇩🇰",
       "publicCount": 42,
       "bridgeCount": 13,
@@ -54,6 +59,7 @@
     {
       "c": "EE",
       "name": "Estonia",
+      "nameEn": "Estonia",
       "flag": "🇪🇪",
       "publicCount": 36,
       "bridgeCount": 17,
@@ -63,6 +69,7 @@
     {
       "c": "FI",
       "name": "Finlandia",
+      "nameEn": "Finland",
       "flag": "🇫🇮",
       "publicCount": 45,
       "bridgeCount": 19,
@@ -72,6 +79,7 @@
     {
       "c": "FR",
       "name": "Francia",
+      "nameEn": "France",
       "flag": "🇫🇷",
       "publicCount": 33,
       "bridgeCount": 22,
@@ -81,6 +89,7 @@
     {
       "c": "DE",
       "name": "Germania",
+      "nameEn": "Germany",
       "flag": "🇩🇪",
       "publicCount": 58,
       "bridgeCount": 16,
@@ -90,6 +99,7 @@
     {
       "c": "GR",
       "name": "Grecia",
+      "nameEn": "Greece",
       "flag": "🇬🇷",
       "publicCount": 45,
       "bridgeCount": 20,
@@ -99,6 +109,7 @@
     {
       "c": "IE",
       "name": "Irlanda",
+      "nameEn": "Ireland",
       "flag": "🇮🇪",
       "publicCount": 33,
       "bridgeCount": 24,
@@ -108,6 +119,7 @@
     {
       "c": "IT",
       "name": "Italia",
+      "nameEn": "Italy",
       "flag": "🇮🇹",
       "publicCount": 42,
       "bridgeCount": 19,
@@ -117,6 +129,7 @@
     {
       "c": "LV",
       "name": "Lettonia",
+      "nameEn": "Latvia",
       "flag": "🇱🇻",
       "publicCount": 49,
       "bridgeCount": 20,
@@ -126,6 +139,7 @@
     {
       "c": "LT",
       "name": "Lituania",
+      "nameEn": "Lithuania",
       "flag": "🇱🇹",
       "publicCount": 42,
       "bridgeCount": 21,
@@ -135,6 +149,7 @@
     {
       "c": "LU",
       "name": "Lussemburgo",
+      "nameEn": "Luxembourg",
       "flag": "🇱🇺",
       "publicCount": 36,
       "bridgeCount": 20,
@@ -144,6 +159,7 @@
     {
       "c": "MT",
       "name": "Malta",
+      "nameEn": "Malta",
       "flag": "🇲🇹",
       "publicCount": 42,
       "bridgeCount": 28,
@@ -153,6 +169,7 @@
     {
       "c": "NO",
       "name": "Norvegia",
+      "nameEn": "Norway",
       "flag": "🇳🇴",
       "publicCount": 36,
       "bridgeCount": 15,
@@ -162,6 +179,7 @@
     {
       "c": "NL",
       "name": "Paesi Bassi",
+      "nameEn": "Netherlands",
       "flag": "🇳🇱",
       "publicCount": 27,
       "bridgeCount": 16,
@@ -171,6 +189,7 @@
     {
       "c": "PL",
       "name": "Polonia",
+      "nameEn": "Poland",
       "flag": "🇵🇱",
       "publicCount": 42,
       "bridgeCount": 19,
@@ -180,6 +199,7 @@
     {
       "c": "PT",
       "name": "Portogallo",
+      "nameEn": "Portugal",
       "flag": "🇵🇹",
       "publicCount": 48,
       "bridgeCount": 23,
@@ -189,6 +209,7 @@
     {
       "c": "GB",
       "name": "Regno Unito",
+      "nameEn": "United Kingdom",
       "flag": "🇬🇧",
       "publicCount": 40,
       "bridgeCount": 12,
@@ -198,6 +219,7 @@
     {
       "c": "CZ",
       "name": "Repubblica Ceca",
+      "nameEn": "Czechia",
       "flag": "🇨🇿",
       "publicCount": 39,
       "bridgeCount": 21,
@@ -207,6 +229,7 @@
     {
       "c": "RO",
       "name": "Romania",
+      "nameEn": "Romania",
       "flag": "🇷🇴",
       "publicCount": 51,
       "bridgeCount": 20,
@@ -216,6 +239,7 @@
     {
       "c": "RS",
       "name": "Serbia",
+      "nameEn": "Serbia",
       "flag": "🇷🇸",
       "publicCount": 33,
       "bridgeCount": 14,
@@ -225,6 +249,7 @@
     {
       "c": "SK",
       "name": "Slovacchia",
+      "nameEn": "Slovakia",
       "flag": "🇸🇰",
       "publicCount": 37,
       "bridgeCount": 17,
@@ -234,6 +259,7 @@
     {
       "c": "SI",
       "name": "Slovenia",
+      "nameEn": "Slovenia",
       "flag": "🇸🇮",
       "publicCount": 45,
       "bridgeCount": 18,
@@ -243,6 +269,7 @@
     {
       "c": "ES",
       "name": "Spagna",
+      "nameEn": "Spain",
       "flag": "🇪🇸",
       "publicCount": 95,
       "bridgeCount": 19,
@@ -252,6 +279,7 @@
     {
       "c": "SE",
       "name": "Svezia",
+      "nameEn": "Sweden",
       "flag": "🇸🇪",
       "publicCount": 48,
       "bridgeCount": 21,
@@ -261,6 +289,7 @@
     {
       "c": "CH",
       "name": "Svizzera",
+      "nameEn": "Switzerland",
       "flag": "🇨🇭",
       "publicCount": 63,
       "bridgeCount": 8,
@@ -270,6 +299,7 @@
     {
       "c": "HU",
       "name": "Ungheria",
+      "nameEn": "Hungary",
       "flag": "🇭🇺",
       "publicCount": 39,
       "bridgeCount": 18,
