@@ -611,6 +611,19 @@ async function setProperty(place, { silent = false } = {}) {
   showError(null);
   setBusy(true, t('busy.measuring'));
 
+  // Fuori area si esce subito: non ha senso interrogare il router per una casa
+  // che nessun mercato in archivio potrà mai raggiungere.
+  const coverageKm = distanceToCoverage();
+  state.outOfCoverage = coverageKm > COVERAGE_LIMIT_KM;
+  if (state.outOfCoverage) {
+    computeAirports();
+    showCoverageNotice(coverageKm);
+    setBusy(false);
+    persistState();
+    return;
+  }
+  $('#coverage').hidden = true;
+
   try {
     state.driveHours = await driveTimes(place, state.cities);
     state.routingEstimated = false;
@@ -639,6 +652,37 @@ async function setProperty(place, { silent = false } = {}) {
   if (!silent) $('#stepbar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+/** Casa fuori area: si mostra il perché e si nasconde tutto il resto. */
+function showCoverageNotice(km) {
+  $('#coverage').hidden = false;
+  $('#coverage-body').textContent = t('coverage.body', { km: Math.round(km).toLocaleString(locale()) });
+  $('#stepbar').hidden = true;
+  $('#markets-bar').hidden = true;
+  $('#results-section').hidden = true;
+  $('#cta').hidden = true;
+  $('#map-key').hidden = true;
+  $('#map-search').classList.add('is-compact');
+  renderPropertyBadge();
+
+  if (map) {
+    layers.drive?.remove();
+    layers.fly?.remove();
+    layers.drive = null;
+    layers.fly = null;
+    layers.cities?.clearLayers();
+    if (layers.home) layers.home.remove();
+    layers.home = L.circleMarker([state.property.lat, state.property.lon], {
+      radius: 8,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#dc2626',
+      fillOpacity: 1,
+    }).addTo(map);
+    map.invalidateSize();
+    map.setView([state.property.lat, state.property.lon], 5);
+  }
+}
+
 function renderPropertyBadge() {
   const badge = $('#map-badge');
   badge.hidden = false;
@@ -655,11 +699,26 @@ function renderPropertyBadge() {
   }
 }
 
+/**
+ * Oltre questa distanza l'archivio non ha niente da dire: nessuna città e
+ * nessun mercato entro il massimo raggio di volo impostabile. Dirlo è meglio
+ * che mostrare una pagina di zeri.
+ */
+const COVERAGE_LIMIT_KM = 3000;
+/** Un hub a migliaia di chilometri non è "l'aeroporto più vicino" in nessun senso utile. */
+const AIRPORT_RELEVANT_KM = 400;
+
 function computeAirports() {
   state.nearAirports = state.airports
     .map((a) => ({ ...a, crowKm: haversine(state.property, a) }))
     .sort((a, b) => a.crowKm - b.crowKm)
+    .filter((a) => a.crowKm <= AIRPORT_RELEVANT_KM)
     .slice(0, 5);
+}
+
+/** Distanza dalla città più vicina dell'archivio: dice se siamo dentro o fuori. */
+function distanceToCoverage() {
+  return state.cities.reduce((min, city) => Math.min(min, haversine(state.property, city)), Infinity);
 }
 
 function recomputeReach() {

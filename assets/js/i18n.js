@@ -48,6 +48,9 @@ const DICT = {
     'step4.to': 'Fine del periodo',
     'step4.note': 'Dati disponibili fino a tutto il {year}.',
 
+    'coverage.title': "Holiday Radar copre l'Europa",
+    'coverage.body': 'La tua casa è a circa {km} km dal mercato più vicino fra quelli che conosco. Questo strumento contiene festività, ponti e vacanze scolastiche di 30 paesi europei: fuori da lì non ho dati, e preferisco dirtelo invece di mostrarti una pagina di zeri.',
+    'coverage.hint': 'Sposta il segnaposto in Europa per usare lo strumento.',
     'mapkey.home': 'la tua casa',
     'mapkey.drive': 'raggio in auto',
     'mapkey.fly': 'raggio in aereo',
@@ -227,6 +230,9 @@ const DICT = {
     'step4.to': 'Horizon end',
     'step4.note': 'Data available through {year}.',
 
+    'coverage.title': 'Holiday Radar covers Europe',
+    'coverage.body': 'Your property is about {km} km from the nearest market I know about. This tool holds public holidays, bridge days and school holidays for 30 European countries — outside that I have no data, and I would rather say so than show you a page of zeros.',
+    'coverage.hint': 'Move the pin to Europe to use the tool.',
     'mapkey.home': 'your property',
     'mapkey.drive': 'drive reach',
     'mapkey.fly': 'flight reach',

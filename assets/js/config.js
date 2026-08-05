@@ -10,7 +10,7 @@
  * Nota: la sezione compare solo a chi ha fatto l'accesso, quindi l'indirizzo
  * non è esposto ai raccoglitori di email che leggono la pagina pubblica.
  */
-export const CONTACT_URL = 'mailto:bebroggi@gmail.com';
+export const CONTACT_URL = 'mailto:bebroggi@gmail.com?subject=Holiday%20Radar';
 
 /** Quante settimane migliori mostrare come schede sotto la timeline. */
 export const TOP_WEEKS = 6;

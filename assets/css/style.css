@@ -184,6 +184,14 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: .45rem 0
 .key-drive { background: color-mix(in srgb, var(--accent) 35%, transparent); border: 1.5px solid var(--accent); }
 .key-fly { background: color-mix(in srgb, var(--fly) 22%, transparent); border: 1.5px dashed var(--fly); }
 
+.coverage {
+  max-width: 40rem; margin: 1.5rem auto 0; padding: 1.5rem 1.75rem; text-align: center;
+  background: var(--warm-soft); border: 1px solid var(--warm); border-radius: var(--radius);
+}
+.coverage h2 { font-size: 1.15rem; color: var(--warm); }
+.coverage p { color: var(--ink-2); font-size: .93rem; margin: 0; }
+.coverage .coverage-hint { color: var(--ink-3); font-size: .84rem; margin-top: .7rem; }
+
 /* ---------- stepbar ---------- */
 
 .stepbar {
