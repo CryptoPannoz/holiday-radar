@@ -54,6 +54,14 @@ non si fa login.
   scolastico compare un `?` con la spiegazione. Non rimuoverlo: una riga vuota letta come
   "lì non vanno in vacanza" è un errore che costa soldi a chi usa il tool.
 
+## Domini autorizzati in Firebase
+
+Il login fallisce con "dominio non autorizzato" su qualunque host non presente in
+Authentication → Settings → Domini autorizzati. Oggi ci sono `localhost`, `bebroggi.it`
+e `cryptopannoz.github.io`. **Attenzione: le GitHub Pages di questa repo servono una copia
+funzionante del tool**, non solo il codice — se si aggiunge un dominio (o si usa
+`127.0.0.1` invece di `localhost`, che per Firebase è un host diverso) va autorizzato lì.
+
 ## Privacy
 
 Si raccolgono email e ricerche in Firestore, e lo si dichiara nel cancello prima del
