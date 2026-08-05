@@ -87,16 +87,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /leads/{uid} {
-      allow read: if false;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow get, write: if request.auth != null && request.auth.uid == uid;
       match /searches/{doc} {
-        allow read: if false;
         allow create: if request.auth != null && request.auth.uid == uid;
       }
     }
   }
 }
 ```
+
+`get` rather than `read` on purpose: a signed-in person may fetch their own record — the
+code needs that to avoid overwriting `firstSeenAt` — but nobody can *list* the collection,
+so the contact list cannot be harvested from a browser. Read the leads from the Firebase
+console instead.
+
+Paste it on one line if the console's editor mangles the closing braces: it auto-closes
+them, and a multi-line paste can end up short.
 
 Selling something to those contacts later is a separate conversation you have to have
 honestly — say so when you collect the address, which is what the gate does.

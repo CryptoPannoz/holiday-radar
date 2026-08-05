@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Holiday Radar</title>
+  <desc id="desc">Scopri quando i tuoi mercati sono liberi di viaggiare.</desc>
+  <rect width="1200" height="630" fill="#f3f1ea"/>
+  <circle cx="80" cy="72" r="7" fill="#6cda8d"/>
+  <text x="101" y="84" fill="#111615" font-family="Arial, sans-serif" font-size="29" font-weight="700">Holiday Radar</text>
+  <text x="319" y="83" fill="#7b817c" font-family="monospace" font-size="14" letter-spacing="2">BY BEBROGGI</text>
+
+  <text x="76" y="226" fill="#111615" font-family="Arial, sans-serif" font-size="77" font-weight="700" letter-spacing="-4">Quando sono liberi</text>
+  <text x="76" y="306" fill="#111615" font-family="Arial, sans-serif" font-size="77" font-weight="700" letter-spacing="-4">di viaggiare</text>
+  <text x="458" y="306" fill="#165dff" font-family="Georgia, serif" font-size="80" font-style="italic" letter-spacing="-4">i tuoi ospiti?</text>
+
+  <text x="80" y="385" fill="#535955" font-family="Arial, sans-serif" font-size="25">Mappa il tuo bacino. Incrocia festività, ponti e vacanze</text>
+  <text x="80" y="420" fill="#535955" font-family="Arial, sans-serif" font-size="25">scolastiche. Trova le settimane che valgono di più.</text>
+
+  <g transform="translate(80 485)">
+    <rect width="293" height="66" rx="33" fill="#165dff"/>
+    <text x="34" y="42" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="700">Apri il radar →</text>
+  </g>
+
+  <g transform="translate(922 294)">
+    <circle r="196" fill="none" stroke="#d8d5cc" stroke-width="2"/>
+    <circle r="139" fill="none" stroke="#165dff" stroke-width="3" stroke-dasharray="9 10"/>
+    <circle r="82" fill="#e7eeff" stroke="#165dff" stroke-width="3"/>
+    <circle r="17" fill="#d35d2a" stroke="#ffffff" stroke-width="5"/>
+    <g fill="#165dff">
+      <circle cx="-52" cy="-43" r="9"/><circle cx="43" cy="-51" r="8"/><circle cx="71" cy="19" r="10"/>
+      <circle cx="-31" cy="64" r="7"/><circle cx="-89" cy="14" r="6"/>
+    </g>
+    <g fill="#687471">
+      <circle cx="-142" cy="-63" r="8"/><circle cx="124" cy="-82" r="7"/><circle cx="145" cy="56" r="10"/>
+      <circle cx="75" cy="139" r="8"/><circle cx="-121" cy="111" r="9"/>
+    </g>
+  </g>
+</svg>

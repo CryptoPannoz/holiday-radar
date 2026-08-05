@@ -50,6 +50,13 @@ const state = {
   events: [],
   weeks: [],
   view: 'list',
+  marketFilter: 'reachable',
+  marketQuery: '',
+  eventFilters: {
+    query: '',
+    market: 'all',
+    types: new Set(['school', 'public', 'bridge']),
+  },
   routingEstimated: false,
   unlocked: false,
 };
@@ -104,6 +111,7 @@ async function init() {
     [state.meta, state.cities, state.airports] = await Promise.all([loadMeta(), loadCities(), loadAirports()]);
     $('#data-stamp').textContent = t('footer.stamp', { date: state.meta.generatedAt });
     clampHorizonToData();
+    markDatePreset();
   } catch (err) {
     showError(t('err.loadDb', { msg: err.message }));
     return;
@@ -123,6 +131,25 @@ function setupHorizonDefaults() {
   $('#horizon-to').value = addMonths(from, DEFAULT_HORIZON_MONTHS - 1);
   state.from = $('#horizon-from').value;
   state.to = $('#horizon-to').value;
+}
+
+function setDatePreset(months) {
+  const from = monthValue(new Date());
+  state.from = $('#horizon-from').value = from;
+  state.to = $('#horizon-to').value = addMonths(from, months - 1);
+  clampHorizonToData();
+  markDatePreset();
+  if (state.property) refreshTimeline();
+  persistState();
+}
+
+function markDatePreset() {
+  document.querySelectorAll('[data-months]').forEach((btn) => {
+    const expected = addMonths(state.from, Number(btn.dataset.months) - 1);
+    const active = expected === state.to;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
 }
 
 /** L'orizzonte non può uscire dagli anni effettivamente scaricati. */
@@ -168,6 +195,9 @@ function wireEvents() {
 
   $('#horizon-from').addEventListener('change', onHorizonChange);
   $('#horizon-to').addEventListener('change', onHorizonChange);
+  document.querySelectorAll('[data-months]').forEach((btn) =>
+    btn.addEventListener('click', () => setDatePreset(Number(btn.dataset.months))),
+  );
 
   $('#markets-reset').addEventListener('click', () => {
     state.manualSelection = false;
@@ -184,16 +214,54 @@ function wireEvents() {
     state.selected = new Set();
     refreshTimeline();
   });
+  $('#market-search').addEventListener('input', (e) => {
+    state.marketQuery = e.target.value.trim().toLocaleLowerCase(locale());
+    renderMarketChips();
+  });
+  document.querySelectorAll('[data-market-filter]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      state.marketFilter = btn.dataset.marketFilter;
+      document.querySelectorAll('[data-market-filter]').forEach((item) => {
+        const active = item === btn;
+        item.classList.toggle('is-active', active);
+        item.setAttribute('aria-pressed', String(active));
+      });
+      renderMarketChips();
+    }),
+  );
 
   document.querySelectorAll('.tab').forEach((tab) =>
     tab.addEventListener('click', () => {
       state.view = tab.dataset.view;
-      document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('is-active', t === tab));
+      document.querySelectorAll('.tab').forEach((item) => {
+        const active = item === tab;
+        item.classList.toggle('is-active', active);
+        item.setAttribute('aria-selected', String(active));
+      });
       ['list', 'markets'].forEach((v) => {
         $(`#view-${v}`).hidden = v !== state.view;
       });
+      $('#data-toolbar').classList.toggle('is-market-view', state.view === 'markets');
     }),
   );
+
+  $('#event-search').addEventListener('input', (e) => {
+    state.eventFilters.query = e.target.value.trim().toLocaleLowerCase(locale());
+    renderList();
+  });
+  $('#event-market').addEventListener('change', (e) => {
+    state.eventFilters.market = e.target.value;
+    renderList();
+    renderMarkets();
+  });
+  document.querySelectorAll('.type-filters input').forEach((input) =>
+    input.addEventListener('change', () => {
+      if (input.checked) state.eventFilters.types.add(input.value);
+      else state.eventFilters.types.delete(input.value);
+      renderList();
+    }),
+  );
+  $('#filters-reset').addEventListener('click', resetEventFilters);
 
   $('#export-csv').addEventListener('click', () => exportAs('csv'));
   $('#export-ics').addEventListener('click', () => exportAs('ics'));
@@ -638,6 +706,8 @@ async function setProperty(place, { silent = false } = {}) {
   if (!state.manualSelection) autoSelectMarkets();
 
   $('#map-search').classList.add('is-compact');
+  $('#planner-grid').classList.add('is-configured');
+  $('#planner-controls').hidden = false;
   $('#stepbar').hidden = false;
   $('#markets-bar').hidden = false;
   $('#results-section').hidden = false;
@@ -656,6 +726,8 @@ async function setProperty(place, { silent = false } = {}) {
 function showCoverageNotice(km) {
   $('#coverage').hidden = false;
   $('#coverage-body').textContent = t('coverage.body', { km: Math.round(km).toLocaleString(locale()) });
+  $('#planner-grid').classList.remove('is-configured');
+  $('#planner-controls').hidden = true;
   $('#stepbar').hidden = true;
   $('#markets-bar').hidden = true;
   $('#results-section').hidden = true;
@@ -756,6 +828,7 @@ function onHorizonChange() {
   state.from = $('#horizon-from').value;
   state.to = $('#horizon-to').value;
   clampHorizonToData();
+  markDatePreset();
   refreshTimeline();
   persistState();
 }
@@ -792,6 +865,7 @@ async function refreshTimeline() {
 
 function render() {
   renderMarketChips();
+  syncEventMarketOptions();
   renderSummary();
   drawCities();
   renderTimeline();
@@ -804,13 +878,32 @@ function render() {
 function renderMarketChips() {
   const box = $('#market-chips');
   box.textContent = '';
-  const rows = [...state.reach.byCountry.values()]
+  const allRows = [...state.reach.byCountry.values()]
     .filter((m) => state.meta.markets.some((x) => x.c === m.c))
     .sort((a, b) => b.reach - a.reach || marketName(a.c).localeCompare(marketName(b.c)));
 
+  const rows = allRows.filter((m) => {
+    const matchesFilter =
+      state.marketFilter === 'all' ||
+      (state.marketFilter === 'selected' && state.selected.has(m.c)) ||
+      (state.marketFilter === 'reachable' && m.access !== 'out');
+    const haystack = `${marketName(m.c)} ${m.c}`.toLocaleLowerCase(locale());
+    return matchesFilter && (!state.marketQuery || haystack.includes(state.marketQuery));
+  });
+
+  $('#market-count').textContent = t('markets.count', { n: state.selected.size });
+
+  if (!rows.length) {
+    box.appendChild(el('p', 'market-empty', t('markets.empty')));
+    return;
+  }
+
   for (const m of rows) {
     const on = state.selected.has(m.c);
-    const chip = el('label', `chip${on ? ' is-on' : ''}${m.access === 'out' ? ' is-far' : ''}`);
+    const chip = el(
+      'label',
+      `chip${on ? ' is-on' : ''}${m.access === 'out' ? ' is-far' : ''} is-${m.access}`,
+    );
     const input = el('input');
     input.type = 'checkbox';
     input.checked = on;
@@ -822,7 +915,8 @@ function renderMarketChips() {
       persistState();
     });
     chip.appendChild(input);
-    chip.append(`${marketFlag(m.c)} ${marketName(m.c)}`);
+    chip.appendChild(el('i', 'chip-access'));
+    chip.appendChild(el('span', 'chip-name', `${marketFlag(m.c)} ${marketName(m.c)}`));
     chip.appendChild(
       el(
         'span',
@@ -839,17 +933,13 @@ function renderSummary() {
   box.textContent = '';
 
   const selected = [...state.selected].map((c) => state.reach.byCountry.get(c)).filter(Boolean);
-  const drivePop = selected.reduce((sum, m) => sum + m.popDrive, 0);
-  const flyPop = selected.reduce((sum, m) => sum + m.popFly, 0);
+  const totalReach = selected.reduce((sum, m) => sum + m.reach, 0);
   const best = topWeeks(state.weeks, 1)[0];
-  const schoolWeeks = state.weeks.filter((w) => [...w.byCountry.values()].some((c) => c.schoolCoverage > 0)).length;
 
   const stats = [
     [String(state.selected.size), t('stats.markets')],
-    [fmtPeople(drivePop), t('stats.drive', { h: fmtHours(state.maxDrive) })],
-    [fmtPeople(flyPop), t('stats.fly', { km: state.maxFly.toLocaleString(locale()) })],
+    [fmtPeople(totalReach), t('stats.reach')],
     [String(state.events.length), t('stats.dates')],
-    [String(schoolWeeks), t('stats.schoolWeeks')],
     [best ? fmtDay(best.start) : '—', best ? t('stats.bestWeek', { n: best.scorePct }) : t('stats.noWeek')],
   ];
 
@@ -1103,11 +1193,64 @@ const MAX_LIST_ROWS = 500;
 /** Le etichette dei tipi di evento mostrate all'utente. */
 const typeLabel = (type) => t(`type.${type}`);
 
+function syncEventMarketOptions() {
+  const select = $('#event-market');
+  const previous = state.eventFilters.market;
+  select.textContent = '';
+  const all = el('option', null, t('filters.allMarkets'));
+  all.value = 'all';
+  select.appendChild(all);
+  [...state.selected]
+    .sort((a, b) => marketName(a).localeCompare(marketName(b), locale()))
+    .forEach((code) => {
+      const option = el('option', null, `${marketFlag(code)} ${marketName(code)}`);
+      option.value = code;
+      select.appendChild(option);
+    });
+  const valid = previous === 'all' || state.selected.has(previous);
+  state.eventFilters.market = valid ? previous : 'all';
+  select.value = state.eventFilters.market;
+}
+
+function filteredEvents() {
+  const { query, market, types } = state.eventFilters;
+  return state.events.filter((ev) => {
+    if (!types.has(ev.type) || (market !== 'all' && ev.c !== market)) return false;
+    if (!query) return true;
+    const haystack = [
+      marketName(ev.c),
+      ev.c,
+      typeLabel(ev.type),
+      ev.name,
+      ...ev.regions,
+    ]
+      .join(' ')
+      .toLocaleLowerCase(locale());
+    return haystack.includes(query);
+  });
+}
+
+function resetEventFilters() {
+  state.eventFilters.query = '';
+  state.eventFilters.market = 'all';
+  state.eventFilters.types = new Set(['school', 'public', 'bridge']);
+  $('#event-search').value = '';
+  $('#event-market').value = 'all';
+  document.querySelectorAll('.type-filters input').forEach((input) => {
+    input.checked = true;
+  });
+  renderList();
+  renderMarkets();
+}
+
 function renderList() {
   const view = $('#view-list');
   view.textContent = '';
-  if (!state.events.length) {
-    view.appendChild(el('p', 'view-empty', t('list.empty')));
+  const rows = filteredEvents().sort((a, b) => a.start.localeCompare(b.start));
+  $('#export-count').textContent = t('export.count', { shown: rows.length, total: state.events.length });
+
+  if (!rows.length) {
+    view.appendChild(el('p', 'view-empty', state.events.length ? t('filters.empty') : t('list.empty')));
     return;
   }
 
@@ -1119,7 +1262,6 @@ function renderList() {
   table.appendChild(thead);
 
   const tbody = el('tbody');
-  const rows = [...state.events].sort((a, b) => a.start.localeCompare(b.start));
   for (const ev of rows.slice(0, MAX_LIST_ROWS)) {
     const tr = el('tr');
     tr.appendChild(el('td', null, `${marketFlag(ev.c)} ${marketName(ev.c)}`));
@@ -1150,47 +1292,42 @@ function renderMarkets() {
   view.textContent = '';
 
   const rows = [...state.reach.byCountry.values()]
-    .filter((m) => m.access !== 'out' || state.selected.has(m.c))
+    .filter((m) => state.selected.has(m.c))
+    .filter((m) => state.eventFilters.market === 'all' || state.eventFilters.market === m.c)
     .sort((a, b) => b.reach - a.reach);
   if (!rows.length) {
     view.appendChild(el('p', 'view-empty', t('mk.empty')));
     return;
   }
   const maxReach = rows[0].reach || 1;
-
-  const table = el('table', 'data');
-  const thead = el('thead');
-  const hr = el('tr');
-  ['market', 'nearest', 'drive', 'flight', 'byCar', 'byAir', 'reach'].forEach((k) =>
-    hr.appendChild(el('th', null, t(`mk.h.${k}`))),
-  );
-  thead.appendChild(hr);
-  table.appendChild(thead);
-
-  const tbody = el('tbody');
+  const grid = el('div', 'market-detail-grid');
   for (const m of rows) {
-    const tr = el('tr');
-    tr.appendChild(el('td', null, `${marketFlag(m.c)} ${marketName(m.c)}`));
-    tr.appendChild(el('td', null, m.nearest ? cityName(m.nearest) : '—'));
-    tr.appendChild(el('td', 'num', fmtHours(m.bestDriveH)));
-    tr.appendChild(
-      el('td', 'num', isFinite(m.bestCrowKm) ? `${Math.round(m.bestCrowKm)} km · ${fmtHours(flightHours(m.bestCrowKm))}` : '—'),
-    );
-    tr.appendChild(el('td', 'num', fmtPeople(m.popDrive)));
-    tr.appendChild(el('td', 'num', fmtPeople(m.popFly)));
-
-    const reachCell = el('td');
+    const card = el('article', 'market-card');
+    const head = el('div', 'market-card-head');
+    head.appendChild(el('h3', null, `${marketFlag(m.c)} ${marketName(m.c)}`));
+    head.appendChild(el('span', `access-pill is-${m.access}`, t(`access.${m.access}`)));
+    card.appendChild(head);
+    card.appendChild(el('p', 'market-city', m.nearest ? cityName(m.nearest) : t('mk.noCity')));
+    const metrics = el('div', 'market-metrics');
+    for (const [value, label] of [
+      [fmtHours(m.bestDriveH), t('mk.h.drive')],
+      [isFinite(m.bestCrowKm) ? `${Math.round(m.bestCrowKm)} km` : '—', t('mk.h.flight')],
+      [fmtPeople(m.reach), t('mk.h.reach')],
+    ]) {
+      const metric = el('div');
+      metric.appendChild(el('b', null, value));
+      metric.appendChild(el('span', null, label));
+      metrics.appendChild(metric);
+    }
+    card.appendChild(metrics);
     const bar = el('div', 'bar');
     const fill = el('i');
     fill.style.width = `${Math.round((m.reach / maxReach) * 100)}%`;
     bar.appendChild(fill);
-    reachCell.appendChild(bar);
-    reachCell.appendChild(el('span', 'muted', fmtPeople(m.reach)));
-    tr.appendChild(reachCell);
-    tbody.appendChild(tr);
+    card.appendChild(bar);
+    grid.appendChild(card);
   }
-  table.appendChild(tbody);
-  view.appendChild(table);
+  view.appendChild(grid);
   view.appendChild(
     el(
       'p',
@@ -1203,7 +1340,7 @@ function renderMarkets() {
 /* ---------- esportazioni ---------- */
 
 function buildRows() {
-  return [...state.events]
+  return filteredEvents()
     .sort((a, b) => a.start.localeCompare(b.start))
     .map((ev) => {
       const reach = state.reach.byCountry.get(ev.c);
@@ -1241,6 +1378,11 @@ function exportAs(format) {
           property: state.property,
           radius: { driveHours: state.maxDrive, flightKm: state.maxFly, flyWeight: FLY_WEIGHT },
           horizon: { from: state.from, to: state.to },
+          filters: {
+            market: state.eventFilters.market,
+            types: [...state.eventFilters.types],
+            query: state.eventFilters.query,
+          },
           markets: [...state.selected].map((c) => ({ code: c, ...state.reach.byCountry.get(c) })),
           weeks: state.weeks.map((w) => ({ start: w.start, week: w.week, score: w.scorePct })),
           dates: rows,
@@ -1313,6 +1455,7 @@ function applySaved(saved) {
     $('#horizon-to').value = saved.to;
   }
   clampHorizonToData();
+  markDatePreset();
 }
 
 function readStateFromURL() {

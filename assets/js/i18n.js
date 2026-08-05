@@ -28,6 +28,10 @@ const DICT = {
     'hero.lede':
       "Metti la tua casa sulla mappa, dì quanto lontano arriva chi viene a trovarti, e guarda tutti i giorni di vacanza dei mercati che possono raggiungerti. Le vacanze scolastiche dei tuoi vicini di frontiera prevedono il tuo calendario meglio di quelle italiane.",
 
+    'planner.eyebrow': 'Configura il bacino',
+    'planner.title': 'Chi può arrivare, e quando',
+    'planner.aria': 'Configurazione ricerca',
+
     'step1.label': "Dov'è la tua casa?",
     'step1.placeholder': 'es. Via Novara 38, Orta San Giulio',
     'step1.go': 'Vai',
@@ -47,6 +51,7 @@ const DICT = {
     'step4.from': 'Inizio del periodo',
     'step4.to': 'Fine del periodo',
     'step4.note': 'Dati disponibili fino a tutto il {year}.',
+    'step4.presetsAria': 'Intervalli rapidi',
 
     'coverage.title': "Holiday Radar copre l'Europa",
     'coverage.body': 'La tua casa è a circa {km} km dal mercato più vicino fra quelli che conosco. Questo strumento contiene festività, ponti e vacanze scolastiche di 30 paesi europei: fuori da lì non ho dati, e preferisco dirtelo invece di mostrarti una pagina di zeri.',
@@ -55,20 +60,37 @@ const DICT = {
     'mapkey.drive': 'raggio in auto',
     'mapkey.fly': 'raggio in aereo',
 
-    'markets.label': 'Mercati — scegline quanti vuoi',
-    'markets.inRadius': 'solo quelli nel raggio',
-    'markets.all': 'tutti e 30',
-    'markets.none': 'nessuno',
+    'markets.label': 'Mercati',
+    'markets.inRadius': 'ripristina suggeriti',
+    'markets.all': 'Seleziona tutti',
+    'markets.none': 'Deseleziona',
+    'markets.search': 'Cerca mercato',
+    'markets.filterAria': 'Filtra mercati',
+    'markets.reachable': 'Nel raggio',
+    'markets.selected': 'Scelti',
+    'markets.allShort': 'Tutti',
+    'markets.count': '{n} scelti',
+    'markets.empty': 'Nessun mercato corrisponde a questo filtro.',
 
+    'results.actionEyebrow': 'Da usare subito',
+    'results.calendarEyebrow': 'Panoramica annuale',
     'results.calendarTitle': 'Calendario delle occasioni',
     'results.calendarLede':
       'Dove le barre si sovrappongono, più mercati sono in vacanza insieme. Dove una barra è sola, quella settimana è tutta per una campagna mirata.',
     'results.bestTitle': 'Le settimane migliori in arrivo',
     'tabs.dates': 'Tutte le date',
     'tabs.markets': 'Dettaglio mercati',
-    'export.csv': 'Esporta CSV',
-    'export.ics': 'Esporta calendario (.ics)',
-    'export.json': 'Esporta JSON',
+    'filters.search': 'Cerca festività, regione o mercato',
+    'filters.market': 'Filtra per mercato',
+    'filters.allMarkets': 'Tutti i mercati',
+    'filters.types': 'Filtra per tipologia',
+    'filters.reset': 'Azzera filtri',
+    'filters.empty': 'Nessuna data corrisponde ai filtri. Prova ad allargarli.',
+    'export.title': 'Esporta la vista filtrata',
+    'export.count': '{shown} date su {total}',
+    'export.csv': 'CSV',
+    'export.ics': 'Calendario .ics',
+    'export.json': 'JSON',
 
     'gate.title': 'I tuoi risultati sono pronti',
     'gate.lede':
@@ -137,6 +159,7 @@ const DICT = {
     'badge.exampleDetail': 'Orta San Giulio, Piemonte',
 
     'stats.markets': 'mercati scelti',
+    'stats.reach': 'bacino raggiungibile ponderato',
     'stats.drive': 'persone entro {h} di auto',
     'stats.fly': 'in più entro {km} km di volo',
     'stats.dates': 'date nel periodo',
@@ -187,6 +210,7 @@ const DICT = {
     'list.showing': "Mostro le prime {shown} date su {total} — l'esportazione le contiene tutte.",
 
     'mk.empty': 'Allarga il raggio per intercettare dei mercati.',
+    'mk.noCity': 'Nessuna città di riferimento',
     'mk.h.market': 'Mercato',
     'mk.h.nearest': 'Città più vicina',
     'mk.h.drive': 'Auto',
@@ -196,6 +220,9 @@ const DICT = {
     'mk.h.reach': 'Bacino ponderato',
     'mk.note':
       'Il bacino ponderato sconta le persone in base a quanto è faticoso raggiungerti: chi sta a due ore conta quasi per intero, chi sta a otto ore conta circa un quinto, e chi deve volare conta al massimo il {pct}%. Serve a ordinare i mercati fra loro, non è una previsione di prenotazioni.',
+    'access.drive': 'auto',
+    'access.fly': 'aereo',
+    'access.out': 'fuori raggio',
   },
 
   en: {
@@ -209,6 +236,10 @@ const DICT = {
     'hero.title2': 'free to travel?',
     'hero.lede':
       "Drop your property on the map, say how far people will travel to reach it, and see every day off in every market that can. Your neighbours' school holidays predict your calendar better than your own do.",
+
+    'planner.eyebrow': 'Configure the catchment',
+    'planner.title': 'Who can come, and when',
+    'planner.aria': 'Search configuration',
 
     'step1.label': 'Where is your property?',
     'step1.placeholder': 'e.g. Via Novara 38, Orta San Giulio',
@@ -229,6 +260,7 @@ const DICT = {
     'step4.from': 'Horizon start',
     'step4.to': 'Horizon end',
     'step4.note': 'Data available through {year}.',
+    'step4.presetsAria': 'Quick date ranges',
 
     'coverage.title': 'Holiday Radar covers Europe',
     'coverage.body': 'Your property is about {km} km from the nearest market I know about. This tool holds public holidays, bridge days and school holidays for 30 European countries — outside that I have no data, and I would rather say so than show you a page of zeros.',
@@ -237,20 +269,37 @@ const DICT = {
     'mapkey.drive': 'drive reach',
     'mapkey.fly': 'flight reach',
 
-    'markets.label': 'Markets — pick as many as you like',
-    'markets.inRadius': 'within my radius',
-    'markets.all': 'all 30',
-    'markets.none': 'none',
+    'markets.label': 'Markets',
+    'markets.inRadius': 'reset suggestions',
+    'markets.all': 'Select all',
+    'markets.none': 'Clear',
+    'markets.search': 'Search markets',
+    'markets.filterAria': 'Filter markets',
+    'markets.reachable': 'In range',
+    'markets.selected': 'Selected',
+    'markets.allShort': 'All',
+    'markets.count': '{n} selected',
+    'markets.empty': 'No market matches this filter.',
 
+    'results.actionEyebrow': 'Use this now',
+    'results.calendarEyebrow': 'Year at a glance',
     'results.calendarTitle': 'Opportunity calendar',
     'results.calendarLede':
       'Where the bars overlap, several markets are off at once. Where a bar stands alone, one campaign has the week to itself.',
     'results.bestTitle': 'Best weeks ahead',
     'tabs.dates': 'All dates',
     'tabs.markets': 'Market breakdown',
-    'export.csv': 'Export CSV',
-    'export.ics': 'Export calendar (.ics)',
-    'export.json': 'Export JSON',
+    'filters.search': 'Search holidays, regions or markets',
+    'filters.market': 'Filter by market',
+    'filters.allMarkets': 'All markets',
+    'filters.types': 'Filter by type',
+    'filters.reset': 'Reset filters',
+    'filters.empty': 'No dates match these filters. Try widening them.',
+    'export.title': 'Export the filtered view',
+    'export.count': '{shown} of {total} dates',
+    'export.csv': 'CSV',
+    'export.ics': 'Calendar .ics',
+    'export.json': 'JSON',
 
     'gate.title': 'Your results are ready',
     'gate.lede':
@@ -319,6 +368,7 @@ const DICT = {
     'badge.exampleDetail': 'Orta San Giulio, Piedmont, Italy',
 
     'stats.markets': 'markets selected',
+    'stats.reach': 'weighted reachable audience',
     'stats.drive': 'people within {h} drive',
     'stats.fly': 'more within {km} km flight',
     'stats.dates': 'dates in horizon',
@@ -369,6 +419,7 @@ const DICT = {
     'list.showing': 'Showing the first {shown} of {total} dates — the export contains all of them.',
 
     'mk.empty': 'Widen the radius to pick up markets.',
+    'mk.noCity': 'No reference city',
     'mk.h.market': 'Market',
     'mk.h.nearest': 'Nearest city',
     'mk.h.drive': 'Drive',
@@ -378,6 +429,9 @@ const DICT = {
     'mk.h.reach': 'Weighted reach',
     'mk.note':
       'Weighted reach discounts people by how hard it is for them to come: someone two hours away counts almost fully, someone eight hours away about a fifth, and someone who has to fly at most {pct}%. It ranks markets against each other — it is not a forecast of bookings.',
+    'access.drive': 'drive',
+    'access.fly': 'flight',
+    'access.out': 'out of range',
   },
 };
 
