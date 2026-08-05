@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Holiday Radar — quando sono liberi di viaggiare i tuoi ospiti</title>
 <meta name="description" content="Strumento gratuito per chi affitta case vacanza. Metti la tua casa sulla mappa, scegli quanto lontano arrivano gli ospiti in auto e in aereo, e ottieni festività, ponti e vacanze scolastiche di tutti i mercati che possono raggiungerti.">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#f3f1ea">
 <meta name="author" content="Alberto Broggi">
 <link rel="canonical" href="https://bebroggi.it/tools/holiday-radar/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
@@ -16,15 +16,23 @@
 <meta property="og:title" content="Holiday Radar — quando sono liberi di viaggiare i tuoi ospiti">
 <meta property="og:description" content="Metti la tua casa sulla mappa e scopri il calendario delle vacanze di ogni mercato che può raggiungerti. Gratuito e open source.">
 <meta property="og:url" content="https://bebroggi.it/tools/holiday-radar/">
+<meta property="og:image" content="https://bebroggi.it/tools/holiday-radar/assets/holiday-radar-social.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://bebroggi.it/tools/holiday-radar/assets/holiday-radar-social.png">
 
 <link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
 <header class="site-header">
-  <a class="brand" href="./"><span class="brand-mark">📡</span> Holiday&nbsp;Radar</a>
+  <a class="brand" href="./"><span class="brand-mark">●</span> Holiday&nbsp;Radar <small>by Bebroggi</small></a>
   <nav>
     <a href="#come-funziona" data-i18n="nav.how">Come funziona</a>
     <a href="https://github.com/CryptoPannoz/holiday-radar" rel="noopener">GitHub</a>
@@ -48,35 +56,107 @@
     </p>
   </div>
 
-  <div class="map-wrap">
-    <div id="map" role="application" data-i18n-aria="step1.aria" aria-label="Mappa della tua casa e dei mercati raggiungibili"></div>
+  <div class="planner-grid" id="planner-grid">
+    <div class="map-wrap">
+      <div id="map" role="application" data-i18n-aria="step1.aria" aria-label="Mappa della tua casa e dei mercati raggiungibili"></div>
 
-    <div class="map-search" id="map-search">
-      <form id="search-form" autocomplete="off">
-        <label for="address"><span class="step-num">1</span> <span data-i18n="step1.label">Dov'è la tua casa?</span></label>
-        <div class="search-row">
-          <div class="field field-grow">
-            <input type="text" id="address" data-i18n-ph="step1.placeholder" placeholder="es. Via Novara 38, Orta San Giulio" required>
-            <ul class="suggestions" id="suggestions" hidden></ul>
+      <div class="map-search" id="map-search">
+        <form id="search-form" autocomplete="off">
+          <label for="address"><span class="step-num">1</span> <span data-i18n="step1.label">Dov'è la tua casa?</span></label>
+          <div class="search-row">
+            <div class="field field-grow">
+              <input type="text" id="address" data-i18n-ph="step1.placeholder" placeholder="es. Via Novara 38, Orta San Giulio" required>
+              <ul class="suggestions" id="suggestions" hidden></ul>
+            </div>
+            <button type="submit" class="btn btn-primary" id="search-btn" data-i18n="step1.go">Vai</button>
           </div>
-          <button type="submit" class="btn btn-primary" id="search-btn" data-i18n="step1.go">Vai</button>
+          <p class="search-hint">
+            <button type="button" class="linklike" id="use-example" data-i18n="step1.example">prova con Villa Volpe, Lago d'Orta</button> ·
+            <button type="button" class="linklike" id="use-locate" data-i18n="step1.locate">usa la mia posizione</button> ·
+            <span data-i18n="step1.orclick">oppure clicca sulla mappa</span>
+          </p>
+          <p class="search-error" id="search-error" hidden></p>
+        </form>
+      </div>
+
+      <div class="map-badge" id="map-badge" hidden></div>
+
+      <div class="map-key" id="map-key" hidden>
+        <span><i class="key-dot key-home"></i> <span data-i18n="mapkey.home">la tua casa</span></span>
+        <span><i class="key-area key-drive"></i> <span data-i18n="mapkey.drive">raggio in auto</span></span>
+        <span><i class="key-area key-fly"></i> <span data-i18n="mapkey.fly">raggio in aereo</span></span>
+      </div>
+    </div>
+
+    <aside class="planner-controls" id="planner-controls" hidden data-i18n-aria="planner.aria" aria-label="Configurazione ricerca">
+      <div class="controls-head">
+        <div>
+          <span class="eyebrow" data-i18n="planner.eyebrow">CONFIGURA IL BACINO</span>
+          <h2 data-i18n="planner.title">Chi può arrivare, e quando</h2>
         </div>
-        <p class="search-hint">
-          <button type="button" class="linklike" id="use-example" data-i18n="step1.example">prova con Villa Volpe, Lago d'Orta</button> ·
-          <button type="button" class="linklike" id="use-locate" data-i18n="step1.locate">usa la mia posizione</button> ·
-          <span data-i18n="step1.orclick">oppure clicca sulla mappa</span>
-        </p>
-        <p class="search-error" id="search-error" hidden></p>
-      </form>
-    </div>
+        <span class="live-dot" aria-hidden="true"></span>
+      </div>
 
-    <div class="map-badge" id="map-badge" hidden></div>
+      <!-- ============ 2-4. RAGGI E PERIODO ============ -->
+      <div class="stepbar" id="stepbar" hidden>
 
-    <div class="map-key" id="map-key" hidden>
-      <span><i class="key-dot key-home"></i> <span data-i18n="mapkey.home">la tua casa</span></span>
-      <span><i class="key-area key-drive"></i> <span data-i18n="mapkey.drive">raggio in auto</span></span>
-      <span><i class="key-area key-fly"></i> <span data-i18n="mapkey.fly">raggio in aereo</span></span>
-    </div>
+        <div class="step step-drive">
+          <div class="step-head">
+            <label for="drive-range"><span class="step-num">2</span> <span class="step-icon">🚗</span> <span data-i18n="step2.label">Raggio in auto</span></label>
+            <output id="drive-out">6h</output>
+          </div>
+          <input type="range" id="drive-range" min="1" max="14" step="0.5" value="6">
+          <p class="step-note" data-i18n="step2.note">La forma segue i tempi di strada reali, non è un cerchio.</p>
+        </div>
+
+        <div class="step step-fly">
+          <div class="step-head">
+            <label for="fly-range"><span class="step-num">3</span> <span class="step-icon">✈️</span> <span data-i18n="step3.label">Raggio in aereo</span></label>
+            <output id="fly-out">1.500 km</output>
+          </div>
+          <input type="range" id="fly-range" min="0" max="3000" step="100" value="1500">
+          <p class="step-note" id="fly-note" data-i18n="step3.note">Distanza in linea d'aria dalla tua casa.</p>
+        </div>
+
+        <div class="step step-horizon">
+          <div class="step-head">
+            <label for="horizon-from"><span class="step-num">4</span> <span class="step-icon">🗓️</span> <span data-i18n="step4.label">Periodo</span></label>
+          </div>
+          <div class="date-presets" role="group" data-i18n-aria="step4.presetsAria" aria-label="Intervalli rapidi">
+            <button type="button" class="mini-btn" data-months="6">6m</button>
+            <button type="button" class="mini-btn is-active" data-months="12">12m</button>
+            <button type="button" class="mini-btn" data-months="24">24m</button>
+          </div>
+          <div class="horizon">
+            <input type="month" id="horizon-from" data-i18n-aria="step4.from" aria-label="Inizio del periodo">
+            <span>→</span>
+            <input type="month" id="horizon-to" data-i18n-aria="step4.to" aria-label="Fine del periodo">
+          </div>
+          <p class="step-note" id="horizon-note"></p>
+        </div>
+      </div>
+
+      <!-- ============ 5. MERCATI ============ -->
+      <div class="markets-bar" id="markets-bar" hidden>
+        <div class="markets-head">
+          <label><span class="step-num">5</span> <span data-i18n="markets.label">Mercati</span> <strong id="market-count"></strong></label>
+          <button type="button" class="linklike" id="markets-reset" data-i18n="markets.inRadius">ripristina suggeriti</button>
+        </div>
+        <div class="market-tools">
+          <input type="search" id="market-search" data-i18n-ph="markets.search" data-i18n-aria="markets.search" placeholder="Cerca mercato" aria-label="Cerca mercato">
+          <div class="segmented" role="group" data-i18n-aria="markets.filterAria" aria-label="Filtra mercati">
+            <button type="button" class="is-active" aria-pressed="true" data-market-filter="reachable" data-i18n="markets.reachable">Nel raggio</button>
+            <button type="button" aria-pressed="false" data-market-filter="selected" data-i18n="markets.selected">Scelti</button>
+            <button type="button" aria-pressed="false" data-market-filter="all" data-i18n="markets.allShort">Tutti</button>
+          </div>
+        </div>
+        <div class="chips" id="market-chips"></div>
+        <div class="markets-actions">
+          <button type="button" class="mini-btn" id="markets-all" data-i18n="markets.all">Seleziona tutti</button>
+          <button type="button" class="mini-btn" id="markets-none" data-i18n="markets.none">Deseleziona</button>
+        </div>
+      </div>
+    </aside>
   </div>
 
   <!-- Fuori dall'area coperta: meglio dirlo che mostrare una pagina di zeri. -->
@@ -84,54 +164,6 @@
     <h2 data-i18n="coverage.title">Holiday Radar copre l'Europa</h2>
     <p id="coverage-body"></p>
     <p class="coverage-hint" data-i18n="coverage.hint">Sposta il segnaposto in Europa per usare lo strumento.</p>
-  </div>
-
-  <!-- ============ 2-4. RAGGI E PERIODO ============ -->
-  <div class="stepbar" id="stepbar" hidden>
-
-    <div class="step step-drive">
-      <div class="step-head">
-        <label for="drive-range"><span class="step-num">2</span> <span class="step-icon">🚗</span> <span data-i18n="step2.label">Raggio in auto</span></label>
-        <output id="drive-out">6h</output>
-      </div>
-      <input type="range" id="drive-range" min="1" max="14" step="0.5" value="6">
-      <p class="step-note" data-i18n="step2.note">La forma segue i tempi di strada reali, non è un cerchio.</p>
-    </div>
-
-    <div class="step step-fly">
-      <div class="step-head">
-        <label for="fly-range"><span class="step-num">3</span> <span class="step-icon">✈️</span> <span data-i18n="step3.label">Raggio in aereo</span></label>
-        <output id="fly-out">1.500 km</output>
-      </div>
-      <input type="range" id="fly-range" min="0" max="3000" step="100" value="1500">
-      <p class="step-note" id="fly-note" data-i18n="step3.note">Distanza in linea d'aria dalla tua casa.</p>
-    </div>
-
-    <div class="step step-horizon">
-      <div class="step-head">
-        <label for="horizon-from"><span class="step-num">4</span> <span class="step-icon">🗓️</span> <span data-i18n="step4.label">Periodo</span></label>
-      </div>
-      <div class="horizon">
-        <input type="month" id="horizon-from" data-i18n-aria="step4.from" aria-label="Inizio del periodo">
-        <span>→</span>
-        <input type="month" id="horizon-to" data-i18n-aria="step4.to" aria-label="Fine del periodo">
-      </div>
-      <p class="step-note" id="horizon-note"></p>
-    </div>
-
-  </div>
-
-  <!-- ============ 5. MERCATI ============ -->
-  <div class="markets-bar" id="markets-bar" hidden>
-    <div class="markets-head">
-      <label><span class="step-num">5</span> <span data-i18n="markets.label">Mercati — scegline quanti vuoi</span></label>
-      <span class="markets-actions">
-        <button type="button" class="linklike" id="markets-reset" data-i18n="markets.inRadius">solo quelli nel raggio</button> ·
-        <button type="button" class="linklike" id="markets-all" data-i18n="markets.all">tutti e 30</button> ·
-        <button type="button" class="linklike" id="markets-none" data-i18n="markets.none">nessuno</button>
-      </span>
-    </div>
-    <div class="chips" id="market-chips"></div>
   </div>
 
 </section>
@@ -143,32 +175,53 @@
 
     <div class="summary" id="summary"></div>
 
+    <div class="panel panel-best">
+      <div class="panel-head"><span class="eyebrow" data-i18n="results.actionEyebrow">DA USARE SUBITO</span><h2 data-i18n="results.bestTitle">Le settimane migliori in arrivo</h2></div>
+      <div class="week-cards" id="week-cards"></div>
+    </div>
+
     <div class="panel">
       <div class="panel-head">
+        <span class="eyebrow" data-i18n="results.calendarEyebrow">PANORAMICA ANNUALE</span>
         <h2 data-i18n="results.calendarTitle">Calendario delle occasioni</h2>
         <p data-i18n="results.calendarLede">Dove le barre si sovrappongono, più mercati sono in vacanza insieme.</p>
       </div>
       <div class="timeline-wrap" id="timeline"></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-head"><h2 data-i18n="results.bestTitle">Le settimane migliori in arrivo</h2></div>
-      <div class="week-cards" id="week-cards"></div>
-    </div>
-
-    <div class="panel">
+    <div class="panel data-panel">
       <div class="tabs" role="tablist">
-        <button class="tab is-active" data-view="list" role="tab" data-i18n="tabs.dates">Tutte le date</button>
-        <button class="tab" data-view="markets" role="tab" data-i18n="tabs.markets">Dettaglio mercati</button>
+        <button class="tab is-active" data-view="list" role="tab" aria-selected="true" data-i18n="tabs.dates">Tutte le date</button>
+        <button class="tab" data-view="markets" role="tab" aria-selected="false" data-i18n="tabs.markets">Dettaglio mercati</button>
+      </div>
+      <div class="data-toolbar" id="data-toolbar">
+        <div class="filter-search">
+          <label class="sr-only" for="event-search" data-i18n="filters.search">Cerca nelle date</label>
+          <input type="search" id="event-search" data-i18n-ph="filters.search" placeholder="Cerca festività, regione o mercato">
+        </div>
+        <select id="event-market" data-i18n-aria="filters.market" aria-label="Filtra per mercato">
+          <option value="all" data-i18n="filters.allMarkets">Tutti i mercati</option>
+        </select>
+        <div class="type-filters" role="group" data-i18n-aria="filters.types" aria-label="Filtra per tipologia">
+          <label><input type="checkbox" value="school" checked> <span class="tag tag-school" data-i18n="type.school">scuole</span></label>
+          <label><input type="checkbox" value="public" checked> <span class="tag tag-public" data-i18n="type.public">festività</span></label>
+          <label><input type="checkbox" value="bridge" checked> <span class="tag tag-bridge" data-i18n="type.bridge">ponte</span></label>
+        </div>
+        <button type="button" class="linklike reset-filters" id="filters-reset" data-i18n="filters.reset">Azzera filtri</button>
       </div>
       <div class="view" id="view-list"></div>
       <div class="view" id="view-markets" hidden></div>
-    </div>
-
-    <div class="exports">
-      <button type="button" class="btn" id="export-csv" data-i18n="export.csv">Esporta CSV</button>
-      <button type="button" class="btn" id="export-ics" data-i18n="export.ics">Esporta calendario (.ics)</button>
-      <button type="button" class="btn" id="export-json" data-i18n="export.json">Esporta JSON</button>
+      <div class="exports">
+        <div class="export-copy">
+          <strong data-i18n="export.title">Esporta la vista filtrata</strong>
+          <span id="export-count"></span>
+        </div>
+        <div class="export-actions">
+          <button type="button" class="btn" id="export-csv" data-i18n="export.csv">CSV</button>
+          <button type="button" class="btn" id="export-ics" data-i18n="export.ics">Calendario .ics</button>
+          <button type="button" class="btn" id="export-json" data-i18n="export.json">JSON</button>
+        </div>
+      </div>
     </div>
 
   </div>
