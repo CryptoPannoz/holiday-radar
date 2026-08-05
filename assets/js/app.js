@@ -1,12 +1,15 @@
 /**
  * Orchestrazione e interfaccia.
  *
- * Il flusso è: indirizzo → chi ti raggiunge → quali mercati → quando sono liberi
- * → cosa esportare. Ogni passaggio ridisegna solo ciò che dipende da lui.
+ * Il flusso segue i numeri sullo schermo: (1) metti la casa sulla mappa,
+ * (2) quanto lontano guidano, (3) quanto lontano volano, (4) che periodo,
+ * (5) quali mercati → risultati. Ogni passo ridisegna solo ciò che dipende da lui,
+ * e i due raggi si ridisegnano senza toccare la rete perché i tempi di guida
+ * sono già stati misurati una volta sola.
  */
 
 import { loadMeta, loadCities, loadAirports, loadMarket } from './data.js';
-import { geocode, reverseGeocode, driveTimes, haversine, flightHours } from './geo.js';
+import { geocode, reverseGeocode, driveTimes, haversine, flightHours, driveReachShape } from './geo.js';
 import {
   computeReach,
   buildEvents,
@@ -17,8 +20,8 @@ import {
   FLY_WEIGHT,
 } from './analysis.js';
 import { toCSV, toICS, download, slug } from './export.js';
-import * as pro from './pro.js';
-import { CHECKOUT_URL, WAITLIST_URL, FREE_LIMITS } from './config.js';
+import * as auth from './auth.js';
+import { CONTACT_URL, TOP_WEEKS, DEFAULT_HORIZON_MONTHS } from './config.js';
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, className, text) => {
@@ -45,8 +48,9 @@ const state = {
   to: null,
   events: [],
   weeks: [],
-  view: 'calendar',
+  view: 'list',
   routingEstimated: false,
+  unlocked: false,
 };
 
 /* ---------- formattazione ---------- */
@@ -67,6 +71,8 @@ const fmtPeople = (thousands) => {
 
 const fmtDay = (iso) =>
   parseDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const fmtDayYear = (iso) =>
+  parseDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 const monthValue = (date) => date.toISOString().slice(0, 7);
 const monthStart = (value) => `${value}-01`;
@@ -74,10 +80,9 @@ const monthEnd = (value) => {
   const [y, m] = value.split('-').map(Number);
   return fmtDate(new Date(Date.UTC(y, m, 0)));
 };
-const monthsBetween = (from, to) => {
-  const [fy, fm] = from.split('-').map(Number);
-  const [ty, tm] = to.split('-').map(Number);
-  return (ty - fy) * 12 + (tm - fm) + 1;
+const addMonths = (value, n) => {
+  const [y, m] = value.split('-').map(Number);
+  return monthValue(new Date(Date.UTC(y, m - 1 + n, 1)));
 };
 
 const marketName = (code) => state.meta?.markets.find((m) => m.c === code)?.name || code;
@@ -87,26 +92,46 @@ const marketFlag = (code) => state.meta?.markets.find((m) => m.c === code)?.flag
 
 async function init() {
   wireEvents();
-
-  const today = new Date();
-  $('#horizon-from').value = monthValue(today);
-  $('#horizon-to').value = monthValue(new Date(Date.UTC(today.getUTCFullYear() + 1, today.getUTCMonth(), 1)));
-  state.from = $('#horizon-from').value;
-  state.to = $('#horizon-to').value;
-
-  await pro.restore();
-  reflectPro();
+  setupHorizonDefaults();
 
   try {
     [state.meta, state.cities, state.airports] = await Promise.all([loadMeta(), loadCities(), loadAirports()]);
     $('#data-stamp').textContent = `Holiday data refreshed ${state.meta.generatedAt}.`;
+    clampHorizonToData();
   } catch (err) {
     showError(`Could not load the holiday database. ${err.message}`);
     return;
   }
 
+  initMap();
+  initAuth();
+
   const restored = readStateFromURL() || readStateFromStorage();
   if (restored) await setProperty(restored, { silent: true });
+}
+
+function setupHorizonDefaults() {
+  const today = new Date();
+  const from = monthValue(today);
+  $('#horizon-from').value = from;
+  $('#horizon-to').value = addMonths(from, DEFAULT_HORIZON_MONTHS - 1);
+  state.from = $('#horizon-from').value;
+  state.to = $('#horizon-to').value;
+}
+
+/** L'orizzonte non può uscire dagli anni effettivamente scaricati. */
+function clampHorizonToData() {
+  const years = state.meta?.years || [];
+  if (!years.length) return;
+  const min = `${years[0]}-01`;
+  const max = `${years[years.length - 1]}-12`;
+  $('#horizon-from').min = min;
+  $('#horizon-from').max = max;
+  $('#horizon-to').min = min;
+  $('#horizon-to').max = max;
+  if (state.from < min) state.from = $('#horizon-from').value = min;
+  if (state.to > max) state.to = $('#horizon-to').value = max;
+  $('#horizon-note').textContent = `Data available through ${years[years.length - 1]}.`;
 }
 
 function wireEvents() {
@@ -118,28 +143,42 @@ function wireEvents() {
   });
 
   $('#use-example').addEventListener('click', () =>
-    setProperty({ label: 'Villa Volpe', detail: 'Orta San Giulio, Piedmont, Italy', lat: 45.7975, lon: 8.4186, country: 'it' }),
+    setProperty({ label: 'Villa Volpe', detail: 'Orta San Giulio, Piedmont, Italy', lat: 45.7975, lon: 8.4186 }),
   );
   $('#use-locate').addEventListener('click', onLocate);
 
   $('#drive-range').addEventListener('input', (e) => {
     state.maxDrive = Number(e.target.value);
     $('#drive-out').textContent = fmtHours(state.maxDrive);
+    drawRadii();
     scheduleRadiusUpdate();
   });
   $('#fly-range').addEventListener('input', (e) => {
     state.maxFly = Number(e.target.value);
-    $('#fly-out').innerHTML = state.maxFly
-      ? `${state.maxFly.toLocaleString('en-GB')}&nbsp;km`
-      : 'off';
+    $('#fly-out').textContent = state.maxFly ? `${state.maxFly.toLocaleString('en-GB')} km` : 'off';
+    $('#fly-note').textContent = state.maxFly
+      ? `Straight line — roughly ${fmtHours(flightHours(state.maxFly))} door to door.`
+      : 'Flight markets excluded.';
+    drawRadii();
     scheduleRadiusUpdate();
   });
 
   $('#horizon-from').addEventListener('change', onHorizonChange);
   $('#horizon-to').addEventListener('change', onHorizonChange);
+
   $('#markets-reset').addEventListener('click', () => {
     state.manualSelection = false;
     autoSelectMarkets();
+    refreshTimeline();
+  });
+  $('#markets-all').addEventListener('click', () => {
+    state.manualSelection = true;
+    state.selected = new Set(state.meta.markets.map((m) => m.c));
+    refreshTimeline();
+  });
+  $('#markets-none').addEventListener('click', () => {
+    state.manualSelection = true;
+    state.selected = new Set();
     refreshTimeline();
   });
 
@@ -147,7 +186,7 @@ function wireEvents() {
     tab.addEventListener('click', () => {
       state.view = tab.dataset.view;
       document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('is-active', t === tab));
-      ['calendar', 'list', 'markets'].forEach((v) => {
+      ['list', 'markets'].forEach((v) => {
         $(`#view-${v}`).hidden = v !== state.view;
       });
     }),
@@ -157,23 +196,240 @@ function wireEvents() {
   $('#export-ics').addEventListener('click', () => exportAs('ics'));
   $('#export-json').addEventListener('click', () => exportAs('json'));
 
-  $('#pro-unlock').addEventListener('click', onUnlock);
-  $('#pro-cta').addEventListener('click', (e) => {
-    if (!CHECKOUT_URL) {
-      e.preventDefault();
-      window.open(WAITLIST_URL, '_blank', 'noopener');
-    }
-  });
-  if (CHECKOUT_URL) $('#pro-cta').href = CHECKOUT_URL;
+  $('#signin-google').addEventListener('click', onGoogleSignIn);
+  $('#email-form').addEventListener('submit', onEmailSignIn);
+  $('#gate-skip').addEventListener('click', () => unlock({ signedIn: false }));
+  $('#account-btn').addEventListener('click', onAccountButton);
 
-  pro.onProChange(() => {
-    reflectPro();
-    if (state.property) {
-      clampHorizonToPlan();
-      autoSelectMarkets({ keepManual: true });
-      refreshTimeline();
+  if (CONTACT_URL) $('#cta-link').href = CONTACT_URL;
+}
+
+/* ---------- autenticazione ---------- */
+
+async function initAuth() {
+  const configured = auth.isConfigured();
+  if (!configured) {
+    // Firebase non ancora collegato: il tool non deve risultare rotto per questo.
+    $('#gate-fallback').hidden = false;
+    $('#gate-lede').textContent =
+      'Sign-in is not switched on yet for this deployment, so everything is open. Carry on.';
+    $('#signin-google').disabled = true;
+    $('#email-form').hidden = true;
+    $('#account-btn').hidden = true;
+    return;
+  }
+  auth.onUserChange((user) => {
+    if (user) {
+      unlock({ signedIn: true });
+      $('#account-btn').textContent = user.email ? user.email.split('@')[0] : 'Signed in';
+      $('#account-btn').title = `Signed in as ${user.email || 'unknown'} — click to sign out`;
+    } else {
+      state.unlocked = false;
+      $('#account-btn').textContent = 'Sign in';
+      $('#account-btn').title = '';
+      applyGate();
     }
   });
+  await auth.init();
+}
+
+async function onGoogleSignIn() {
+  setGateStatus('Opening Google…');
+  try {
+    await auth.signInWithGoogle();
+  } catch (err) {
+    setGateStatus(friendlyAuthError(err), true);
+  }
+}
+
+async function onEmailSignIn(e) {
+  e.preventDefault();
+  const email = $('#email-input').value.trim();
+  if (!email) return;
+  setGateStatus('Sending…');
+  try {
+    await auth.sendEmailLink(email);
+    setGateStatus(`Link sent to ${email}. Open it on this device and you are in.`);
+  } catch (err) {
+    setGateStatus(friendlyAuthError(err), true);
+  }
+}
+
+function friendlyAuthError(err) {
+  const code = err?.code || '';
+  if (code.includes('unauthorized-domain')) return 'This domain is not authorised in the Firebase project yet.';
+  if (code.includes('operation-not-allowed')) return 'That sign-in method is not enabled in the Firebase project.';
+  if (code.includes('invalid-email')) return 'That email address does not look right.';
+  if (code.includes('network')) return 'Network problem — check the connection and try again.';
+  return err?.message || 'Sign-in failed.';
+}
+
+function setGateStatus(message, isError = false) {
+  const box = $('#gate-status');
+  box.hidden = !message;
+  box.textContent = message || '';
+  box.classList.toggle('is-error', isError);
+}
+
+async function onAccountButton() {
+  if (!auth.currentUser()) {
+    $('#results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  await auth.signOut();
+  setGateStatus(null);
+}
+
+function unlock({ signedIn }) {
+  state.unlocked = true;
+  applyGate();
+  if (signedIn) {
+    setGateStatus(null);
+    recordCurrentSearch();
+  }
+}
+
+function applyGate() {
+  const section = $('#results-section');
+  section.classList.toggle('is-locked', !state.unlocked);
+  $('#gate').hidden = state.unlocked;
+  $('#cta').hidden = !state.unlocked || !CONTACT_URL;
+  // Sotto il velo la tabulazione non deve poter entrare.
+  section.querySelectorAll('button, input, a').forEach((node) => {
+    if (node.closest('.gate')) return;
+    node.tabIndex = state.unlocked ? 0 : -1;
+  });
+}
+
+let recordTimer = null;
+function recordCurrentSearch() {
+  if (!auth.currentUser() || !state.property) return;
+  clearTimeout(recordTimer);
+  // Una riga per ricerca, non una per movimento di cursore.
+  recordTimer = setTimeout(() => {
+    auth.recordSearch({
+      property: { label: state.property.label, lat: state.property.lat, lon: state.property.lon },
+      driveHours: state.maxDrive,
+      flightKm: state.maxFly,
+      horizon: { from: state.from, to: state.to },
+      markets: [...state.selected],
+      topMarket: [...state.reach.byCountry.values()].sort((a, b) => b.reach - a.reach)[0]?.c || null,
+    });
+  }, 4000);
+}
+
+/* ---------- mappa ---------- */
+
+let map = null;
+let layers = { drive: null, fly: null, home: null, cities: null };
+
+function initMap() {
+  if (typeof L === 'undefined') return;
+  map = L.map('map', { scrollWheelZoom: false, zoomControl: false }).setView([48.5, 9.5], 5);
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(map);
+  layers.cities = L.layerGroup().addTo(map);
+
+  map.on('click', async (e) => {
+    const { lat, lng: lon } = e.latlng;
+    const place = (await reverseGeocode(lat, lon)) || {
+      label: `${lat.toFixed(3)}, ${lon.toFixed(3)}`,
+      detail: 'dropped pin',
+      lat,
+      lon,
+    };
+    setProperty(place);
+  });
+}
+
+/**
+ * Disegna i due raggi. Il volo è un cerchio perché la distanza in linea d'aria
+ * lo è davvero; la guida no, e disegnarla come tale sarebbe la bugia che questo
+ * strumento esiste per evitare.
+ */
+function drawRadii() {
+  if (!map || !state.property) return;
+  const origin = state.property;
+
+  if (layers.fly) layers.fly.remove();
+  layers.fly = null;
+  if (state.maxFly > 0) {
+    layers.fly = L.circle([origin.lat, origin.lon], {
+      radius: state.maxFly * 1000,
+      color: getCSS('--fly'),
+      weight: 1.5,
+      dashArray: '6 5',
+      fillColor: getCSS('--fly'),
+      fillOpacity: 0.07,
+      interactive: false,
+    }).addTo(map);
+  }
+
+  if (layers.drive) layers.drive.remove();
+  layers.drive = null;
+  const shape = driveReachShape(origin, state.cities, state.driveHours, state.maxDrive);
+  if (shape) {
+    layers.drive = L.polygon(shape, {
+      color: getCSS('--accent'),
+      weight: 2,
+      fillColor: getCSS('--accent'),
+      fillOpacity: 0.16,
+      interactive: false,
+      smoothFactor: 1,
+    }).addTo(map);
+  }
+
+  if (layers.home) layers.home.remove();
+  layers.home = L.circleMarker([origin.lat, origin.lon], {
+    radius: 8,
+    color: '#fff',
+    weight: 2,
+    fillColor: '#dc2626',
+    fillOpacity: 1,
+  })
+    .bindTooltip(origin.label, { direction: 'top' })
+    .addTo(map);
+}
+
+function getCSS(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#0f766e';
+}
+
+function drawCities() {
+  if (!map || !layers.cities) return;
+  layers.cities.clearLayers();
+  for (const city of state.reach.cities) {
+    if (city.access === 'out' || !state.selected.has(city.c)) continue;
+    const drive = city.access === 'drive';
+    layers.cities.addLayer(
+      L.circleMarker([city.lat, city.lon], {
+        radius: Math.max(3.5, Math.min(13, Math.sqrt(city.p) / 9)),
+        color: drive ? getCSS('--accent') : getCSS('--fly'),
+        fillColor: drive ? getCSS('--accent') : getCSS('--fly'),
+        fillOpacity: 0.5,
+        weight: 1,
+      }).bindTooltip(
+        `<b>${city.n}</b><br>${
+          drive
+            ? `${fmtHours(city.driveH)} drive`
+            : `${Math.round(city.crowKm)} km flight · ~${fmtHours(city.flightH)} door to door`
+        }<br>${fmtPeople(city.p)} people`,
+      ),
+    );
+  }
+}
+
+function fitMap() {
+  if (!map) return;
+  const bounds = layers.drive?.getBounds?.();
+  const flyBounds = layers.fly?.getBounds?.();
+  let target = bounds;
+  if (flyBounds) target = target ? target.extend(flyBounds) : flyBounds;
+  if (target?.isValid?.()) map.fitBounds(target.pad(0.06));
+  setTimeout(() => map.invalidateSize(), 60);
 }
 
 /* ---------- ricerca indirizzo ---------- */
@@ -207,7 +463,7 @@ function renderSuggestions() {
   list.textContent = '';
   if (!suggestions.length) return hideSuggestions();
   activeSuggestion = -1;
-  suggestions.forEach((s, i) => {
+  suggestions.forEach((s) => {
     const li = el('li');
     li.textContent = s.label;
     li.appendChild(el('small', null, s.detail));
@@ -215,7 +471,6 @@ function renderSuggestions() {
       hideSuggestions();
       setProperty(s);
     });
-    li.dataset.index = String(i);
     list.appendChild(li);
   });
   list.hidden = false;
@@ -231,11 +486,8 @@ function onSuggestionKeys(e) {
   if (list.hidden || !suggestions.length) return;
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
-    activeSuggestion =
-      (activeSuggestion + (e.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length;
-    [...list.children].forEach((li, i) =>
-      li.setAttribute('aria-selected', String(i === activeSuggestion)),
-    );
+    activeSuggestion = (activeSuggestion + (e.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length;
+    [...list.children].forEach((li, i) => li.setAttribute('aria-selected', String(i === activeSuggestion)));
   } else if (e.key === 'Enter' && activeSuggestion >= 0) {
     e.preventDefault();
     hideSuggestions();
@@ -250,7 +502,7 @@ async function onSubmit(e) {
   hideSuggestions();
   const query = $('#address').value.trim();
   if (!query) return;
-  setBusy(true, 'Finding your property…');
+  setBusy(true, 'Finding…');
   try {
     const results = await geocode(query, { limit: 1 });
     if (!results.length) throw new Error('No place matched that address. Try adding the town or country.');
@@ -283,7 +535,7 @@ function onLocate() {
 async function setProperty(place, { silent = false } = {}) {
   state.property = place;
   showError(null);
-  setBusy(true, 'Measuring drive times…');
+  setBusy(true, 'Measuring…');
 
   try {
     state.driveHours = await driveTimes(place, state.cities);
@@ -297,12 +549,36 @@ async function setProperty(place, { silent = false } = {}) {
   computeAirports();
   recomputeReach();
   if (!state.manualSelection) autoSelectMarkets();
-  await refreshTimeline();
 
-  $('#app').hidden = false;
+  $('#map-search').classList.add('is-compact');
+  $('#stepbar').hidden = false;
+  $('#markets-bar').hidden = false;
+  $('#results-section').hidden = false;
+  $('#map-key').hidden = false;
+  renderPropertyBadge();
+  drawRadii();
+  fitMap();
+
+  await refreshTimeline();
   setBusy(false);
   persistState();
-  if (!silent) $('#app').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!silent) $('#stepbar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderPropertyBadge() {
+  const badge = $('#map-badge');
+  badge.hidden = false;
+  badge.textContent = '';
+  badge.appendChild(el('b', null, state.property.label));
+  badge.appendChild(el('span', null, state.property.detail || `${state.property.lat.toFixed(3)}, ${state.property.lon.toFixed(3)}`));
+  if (state.nearAirports[0]) {
+    badge.appendChild(
+      el('span', null, `Nearest hub: ${state.nearAirports[0].i} · ${Math.round(state.nearAirports[0].crowKm)} km`),
+    );
+  }
+  if (state.routingEstimated) {
+    badge.appendChild(el('span', 'muted', 'Routing unavailable — drive times estimated.'));
+  }
 }
 
 function computeAirports() {
@@ -322,25 +598,10 @@ function recomputeReach() {
   });
 }
 
-function autoSelectMarkets({ keepManual = false } = {}) {
-  if (keepManual && state.manualSelection) return enforceMarketLimit();
-  const ranked = [...state.reach.byCountry.values()]
-    .filter((m) => m.access !== 'out')
-    .sort((a, b) => b.reach - a.reach);
-  const limit = pro.isPro() ? ranked.length : FREE_LIMITS.markets;
-  state.selected = new Set(ranked.slice(0, limit).map((m) => m.c));
-}
-
-/** Il piano gratuito tiene i mercati più grandi e lascia cadere il resto. */
-function enforceMarketLimit() {
-  if (pro.isPro() || state.selected.size <= FREE_LIMITS.markets) return;
-  const kept = [...state.selected]
-    .map((c) => state.reach.byCountry.get(c))
-    .filter(Boolean)
-    .sort((a, b) => b.reach - a.reach)
-    .slice(0, FREE_LIMITS.markets)
-    .map((m) => m.c);
-  state.selected = new Set(kept);
+function autoSelectMarkets() {
+  state.selected = new Set(
+    [...state.reach.byCountry.values()].filter((m) => m.access !== 'out').map((m) => m.c),
+  );
 }
 
 let radiusTimer = null;
@@ -351,35 +612,22 @@ function scheduleRadiusUpdate() {
     if (!state.manualSelection) autoSelectMarkets();
     await refreshTimeline();
     persistState();
-  }, 180);
+  }, 200);
 }
 
 function onHorizonChange() {
   const from = $('#horizon-from').value;
   const to = $('#horizon-to').value;
   if (!from || !to) return;
-  if (to < from) {
-    $('#horizon-to').value = from;
-  }
+  if (to < from) $('#horizon-to').value = from;
   state.from = $('#horizon-from').value;
   state.to = $('#horizon-to').value;
-  clampHorizonToPlan();
+  clampHorizonToData();
   refreshTimeline();
   persistState();
 }
 
-/** Il piano gratuito si ferma a dodici mesi. */
-function clampHorizonToPlan() {
-  if (pro.isPro()) return;
-  if (monthsBetween(state.from, state.to) <= FREE_LIMITS.months) return;
-  const [y, m] = state.from.split('-').map(Number);
-  const capped = new Date(Date.UTC(y, m - 1 + FREE_LIMITS.months - 1, 1));
-  state.to = monthValue(capped);
-  $('#horizon-to').value = state.to;
-}
-
 async function refreshTimeline() {
-  enforceMarketLimit();
   const codes = [...state.selected];
   const missing = codes.filter((c) => !state.markets.has(c));
   const loaded = await Promise.allSettled(missing.map(loadMarket));
@@ -389,12 +637,11 @@ async function refreshTimeline() {
 
   const from = monthStart(state.from);
   const to = monthEnd(state.to);
-  const includeSchool = pro.isPro();
 
   state.events = codes
     .map((c) => state.markets.get(c))
     .filter(Boolean)
-    .flatMap((market) => buildEvents(market, from, to, { includeSchool }));
+    .flatMap((market) => buildEvents(market, from, to));
 
   state.weeks = buildWeeks({
     events: state.events,
@@ -405,46 +652,35 @@ async function refreshTimeline() {
   });
 
   render();
+  recordCurrentSearch();
 }
 
 /* ---------- rendering ---------- */
 
 function render() {
-  renderProperty();
-  renderMarketList();
-  renderAirports();
+  renderMarketChips();
   renderSummary();
-  renderMap();
-  renderCalendar();
+  drawCities();
+  renderTimeline();
+  renderWeekCards();
   renderList();
   renderMarkets();
-  reflectPro();
+  applyGate();
 }
 
-function renderProperty() {
-  const card = $('#property-card');
-  card.textContent = '';
-  card.appendChild(el('strong', null, state.property.label));
-  card.appendChild(el('span', null, state.property.detail || `${state.property.lat.toFixed(3)}, ${state.property.lon.toFixed(3)}`));
-  if (state.routingEstimated) {
-    card.appendChild(
-      el('span', 'limit-note', 'Routing service unreachable — drive times are estimated from distance.'),
-    );
-  }
-}
-
-function renderMarketList() {
-  const box = $('#market-list');
+function renderMarketChips() {
+  const box = $('#market-chips');
   box.textContent = '';
   const rows = [...state.reach.byCountry.values()]
     .filter((m) => state.meta.markets.some((x) => x.c === m.c))
     .sort((a, b) => b.reach - a.reach || marketName(a.c).localeCompare(marketName(b.c)));
 
   for (const m of rows) {
-    const row = el('label', 'market-row' + (m.access === 'out' ? ' is-out' : ''));
+    const on = state.selected.has(m.c);
+    const chip = el('label', `chip${on ? ' is-on' : ''}${m.access === 'out' ? ' is-far' : ''}`);
     const input = el('input');
     input.type = 'checkbox';
-    input.checked = state.selected.has(m.c);
+    input.checked = on;
     input.addEventListener('change', () => {
       state.manualSelection = true;
       if (input.checked) state.selected.add(m.c);
@@ -452,45 +688,17 @@ function renderMarketList() {
       refreshTimeline();
       persistState();
     });
-    row.appendChild(input);
-    row.appendChild(el('span', 'mkt-name', `${marketFlag(m.c)} ${marketName(m.c)}`));
-    row.appendChild(
+    chip.appendChild(input);
+    chip.append(`${marketFlag(m.c)} ${marketName(m.c)}`);
+    chip.appendChild(
       el(
         'span',
-        'mkt-reach',
-        m.access === 'drive' ? fmtHours(m.bestDriveH) : m.access === 'fly' ? `${Math.round(m.bestCrowKm)}km` : '—',
+        'chip-reach',
+        m.access === 'drive' ? fmtHours(m.bestDriveH) : m.access === 'fly' ? `${Math.round(m.bestCrowKm)}km` : '·',
       ),
     );
-    box.appendChild(row);
+    box.appendChild(chip);
   }
-
-  const note = $('#limit-note');
-  if (!pro.isPro()) {
-    note.hidden = false;
-    note.textContent = `Free plan: ${state.selected.size}/${FREE_LIMITS.markets} markets, 12-month horizon, public holidays only.`;
-  } else {
-    note.hidden = true;
-  }
-}
-
-function renderAirports() {
-  const box = $('#airports');
-  box.textContent = '';
-  box.appendChild(el('h4', null, 'Nearest airports'));
-  const ul = el('ul');
-  for (const a of state.nearAirports) {
-    const li = el('li');
-    const left = el('span');
-    left.appendChild(el('code', null, a.i));
-    left.append(` ${a.n}`);
-    li.appendChild(left);
-    li.appendChild(el('span', 'muted', `${Math.round(a.crowKm)} km`));
-    ul.appendChild(li);
-  }
-  box.appendChild(ul);
-  box.appendChild(
-    el('p', 'control-note', 'These hubs decide which far-away markets are realistically yours.'),
-  );
 }
 
 function renderSummary() {
@@ -501,13 +709,15 @@ function renderSummary() {
   const drivePop = selected.reduce((sum, m) => sum + m.popDrive, 0);
   const flyPop = selected.reduce((sum, m) => sum + m.popFly, 0);
   const best = topWeeks(state.weeks, 1)[0];
+  const schoolWeeks = state.weeks.filter((w) => [...w.byCountry.values()].some((c) => c.schoolCoverage > 0)).length;
 
   const stats = [
     [String(state.selected.size), 'markets selected'],
     [fmtPeople(drivePop), `people within ${fmtHours(state.maxDrive)} drive`],
     [fmtPeople(flyPop), `more within ${state.maxFly.toLocaleString('en-GB')} km flight`],
     [String(state.events.length), 'dates in horizon'],
-    [best ? `${fmtDay(best.start)}` : '—', best ? `best week (score ${best.scorePct})` : 'no scored week'],
+    [String(schoolWeeks), 'weeks with school holidays'],
+    [best ? fmtDay(best.start) : '—', best ? `best week · score ${best.scorePct}` : 'no scored week'],
   ];
 
   for (const [value, label] of stats) {
@@ -518,163 +728,234 @@ function renderSummary() {
   }
 }
 
-let map = null;
-let markerLayer = null;
+/* -- timeline -- */
 
-function renderMap() {
-  if (typeof L === 'undefined') return;
-  if (!map) {
-    map = L.map('map', { scrollWheelZoom: false });
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; OpenStreetMap',
-    }).addTo(map);
-    markerLayer = L.layerGroup().addTo(map);
-  }
-  markerLayer.clearLayers();
-
-  const home = L.circleMarker([state.property.lat, state.property.lon], {
-    radius: 8,
-    color: '#dc2626',
-    fillColor: '#dc2626',
-    fillOpacity: 1,
-    weight: 2,
-  }).bindTooltip(state.property.label);
-  markerLayer.addLayer(home);
-
-  const points = [[state.property.lat, state.property.lon]];
-  for (const city of state.reach.cities) {
-    if (city.access === 'out' || !state.selected.has(city.c)) continue;
-    const drive = city.access === 'drive';
-    const marker = L.circleMarker([city.lat, city.lon], {
-      radius: Math.max(4, Math.min(14, Math.sqrt(city.p) / 9)),
-      color: drive ? '#0f766e' : '#64748b',
-      fillColor: drive ? '#0f766e' : '#64748b',
-      fillOpacity: 0.55,
-      weight: 1,
-    }).bindTooltip(
-      `<b>${city.n}</b><br>${drive ? `${fmtHours(city.driveH)} drive` : `${Math.round(city.crowKm)} km flight (~${fmtHours(city.flightH)} door to door)`}<br>${fmtPeople(city.p)} people`,
-    );
-    markerLayer.addLayer(marker);
-    points.push([city.lat, city.lon]);
-  }
-
-  map.fitBounds(L.latLngBounds(points).pad(0.12));
-  setTimeout(() => map.invalidateSize(), 60);
+function horizonScale() {
+  const start = parseDate(monthStart(state.from));
+  const end = parseDate(monthEnd(state.to));
+  const totalDays = Math.max(1, (end - start) / 86400000 + 1);
+  const pct = (iso) => ((parseDate(iso) - start) / 86400000 / totalDays) * 100;
+  return { start, end, totalDays, pct };
 }
 
-/* -- calendario opportunità -- */
+function monthSpans() {
+  const spans = [];
+  let cursor = state.from;
+  while (cursor <= state.to) {
+    spans.push({
+      value: cursor,
+      label: parseDate(monthStart(cursor)).toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }),
+      year: cursor.slice(2, 4),
+      start: monthStart(cursor),
+      end: monthEnd(cursor),
+    });
+    cursor = addMonths(cursor, 1);
+  }
+  return spans;
+}
 
-function renderCalendar() {
-  const view = $('#view-calendar');
-  view.textContent = '';
+function renderTimeline() {
+  const wrap = $('#timeline');
+  wrap.textContent = '';
 
-  if (!state.weeks.length || !state.selected.size) {
-    view.appendChild(el('p', 'view-empty', 'Select at least one market to see the calendar.'));
+  if (!state.selected.size) {
+    wrap.appendChild(el('p', 'view-empty', 'Pick at least one market to see the calendar.'));
     return;
   }
 
-  const table = el('table', 'cal');
+  const { pct, totalDays } = horizonScale();
+  const months = monthSpans();
+  const board = el('div', 'timeline');
+
+  // riga dei mesi
+  const monthRow = el('div', 'tl-months');
+  for (const m of months) {
+    const cell = el('div', 'tl-month', m.label === 'Jan' ? `${m.label} ${m.year}` : m.label);
+    const width = ((parseDate(m.end) - parseDate(m.start)) / 86400000 + 1) / totalDays;
+    cell.style.flex = `0 0 ${width * 100}%`;
+    monthRow.appendChild(cell);
+  }
+  board.appendChild(monthRow);
+
+  // istogramma della domanda, allineato alla stessa scala di date
+  const demand = el('div', 'tl-demand');
+  demand.style.position = 'relative';
+  const best = new Set(topWeeks(state.weeks, TOP_WEEKS).map((w) => w.start));
+  for (const week of state.weeks) {
+    const bar = el('div', `tl-demand-bar${best.has(week.start) ? ' is-top' : ''}`);
+    bar.style.position = 'absolute';
+    bar.style.left = `${pct(week.start)}%`;
+    bar.style.width = `${(7 / totalDays) * 100}%`;
+    bar.style.bottom = '0';
+    bar.style.height = `${Math.max(2, week.scorePct)}%`;
+    bar.title = `Week of ${fmtDayYear(week.start)} — demand score ${week.scorePct}/100`;
+    demand.appendChild(bar);
+  }
+  board.appendChild(demand);
+  board.appendChild(el('div', 'tl-demand-label', 'Weekly demand score — how much of your reachable market is off'));
+
+  // una corsia per mercato, ordinata per peso
   const codes = [...state.selected].sort(
     (a, b) => (state.reach.byCountry.get(b)?.reach || 0) - (state.reach.byCountry.get(a)?.reach || 0),
   );
-
-  // intestazione: i mesi raggruppano le settimane
-  const thead = el('thead');
-  const monthRow = el('tr');
-  monthRow.appendChild(el('th'));
-  let currentMonth = null;
-  let monthCell = null;
-  for (const week of state.weeks) {
-    const label = parseDate(week.start).toLocaleDateString('en-GB', { month: 'short', year: '2-digit', timeZone: 'UTC' });
-    if (label !== currentMonth) {
-      currentMonth = label;
-      monthCell = el('th', 'cal-month', label);
-      monthCell.colSpan = 1;
-      monthRow.appendChild(monthCell);
-    } else {
-      monthCell.colSpan += 1;
-    }
-  }
-  thead.appendChild(monthRow);
-  table.appendChild(thead);
-
-  const tbody = el('tbody');
-
-  // riga punteggio
-  if (pro.isPro()) {
-    const scoreRow = el('tr', 'row-score');
-    scoreRow.appendChild(el('th', null, 'Demand'));
-    for (const week of state.weeks) {
-      const td = el('td');
-      const bar = el('div', 'score-bar');
-      const fill = el('i', 'score-fill');
-      fill.style.height = `${week.scorePct}%`;
-      bar.appendChild(fill);
-      bar.title = `Week of ${fmtDay(week.start)} — score ${week.scorePct}/100`;
-      td.appendChild(bar);
-      scoreRow.appendChild(td);
-    }
-    tbody.appendChild(scoreRow);
-  }
+  const byCountry = new Map(codes.map((c) => [c, []]));
+  for (const ev of state.events) byCountry.get(ev.c)?.push(ev);
 
   for (const code of codes) {
-    const tr = el('tr');
-    tr.appendChild(el('th', null, `${marketFlag(code)} ${marketName(code)}`));
-    for (const week of state.weeks) {
-      const cell = week.byCountry.get(code);
-      const td = el('td');
-      const box = el('div', 'cell');
-      const hasSchool = cell.schoolCoverage > 0;
-      const hasPublic = cell.publicDays.length > 0;
-      if (hasSchool && hasPublic) box.classList.add('has-both');
-      else if (hasSchool) box.classList.add('has-school');
-      else if (hasPublic) box.classList.add('has-public');
-      if (cell.bridge) box.classList.add('has-bridge');
-      if (hasSchool && cell.schoolCoverage < 0.34) box.dataset.partial = '1';
-      else if (hasSchool && cell.schoolCoverage < 0.67) box.dataset.partial = '2';
+    const row = el('div', 'tl-row');
+    const label = el('div', 'tl-label');
+    label.append(`${marketFlag(code)} ${marketName(code)} `);
+    const reach = state.reach.byCountry.get(code);
+    label.appendChild(el('span', 'tl-reach', reach ? fmtPeople(reach.reach) : ''));
+    label.title = `${marketName(code)} — weighted reach ${reach ? fmtPeople(reach.reach) : '0'}`;
 
-      const bits = cell.events.map((ev) =>
-        ev.type === 'school'
-          ? `School: ${ev.name}${ev.regions.length ? ` (${ev.regions.length} regions)` : ''}`
-          : ev.type === 'bridge'
-            ? `Bridge: ${ev.name}`
-            : `Holiday: ${ev.name}`,
-      );
-      box.title = `${marketName(code)} — week of ${fmtDay(week.start)}\n${bits.join('\n') || 'nothing on'}`;
-      td.appendChild(box);
-      tr.appendChild(td);
+    // Una riga senza barre viola non significa "qui non vanno in vacanza": spesso
+    // significa che la fonte non ha ancora pubblicato quel calendario scolastico.
+    // Senza dirlo, l'assenza di dato si legge come assenza di domanda.
+    const gap = schoolGapFor(code);
+    if (gap) {
+      const mark = el('span', 'tl-nodata', '?');
+      mark.title = gap;
+      label.appendChild(mark);
     }
-    tbody.appendChild(tr);
+    row.appendChild(label);
+
+    const track = el('div', 'tl-track');
+    const grid = el('div', 'tl-grid');
+    for (const m of months.slice(1)) {
+      const line = el('i');
+      line.style.left = `${pct(m.start)}%`;
+      grid.appendChild(line);
+    }
+    track.appendChild(grid);
+
+    const events = byCountry.get(code) || [];
+    // ordine di disegno: le scuole fanno da fondo, i ponti sopra, le feste in cima
+    const order = { school: 0, bridge: 1, public: 2 };
+    for (const ev of [...events].sort((a, b) => order[a.type] - order[b.type])) {
+      const bar = el('div', `tl-bar tl-${ev.type}`);
+      const left = Math.max(0, pct(ev.start));
+      bar.style.left = `${left}%`;
+      if (ev.type !== 'public') {
+        const right = Math.min(100, pct(ev.end) + (1 / totalDays) * 100);
+        bar.style.width = `${Math.max(0.25, right - left)}%`;
+      }
+      if (ev.type === 'school' && ev.coverage < 1) {
+        bar.style.opacity = String(0.3 + ev.coverage * 0.55);
+        bar.style.height = `${0.5 + ev.coverage * 0.55}rem`;
+      }
+      bar.title = tooltipFor(ev);
+      track.appendChild(bar);
+    }
+
+    row.appendChild(track);
+    board.appendChild(row);
   }
 
-  table.appendChild(tbody);
-  view.appendChild(table);
-
-  const key = el('div', 'cal-key');
-  const entries = [
+  const key = el('div', 'tl-key');
+  for (const [cls, text] of [
     ['k-public', 'public holiday'],
-    ['k-school', 'school holiday (faded = only some regions)'],
+    ['k-school', 'school holiday (thinner = fewer regions)'],
     ['k-bridge', 'long weekend / bridge day'],
-  ];
-  if (pro.isPro()) entries.push(['k-score', 'weekly demand score']);
-  for (const [cls, label] of entries) {
+    ['k-demand', 'weekly demand score'],
+  ]) {
     const span = el('span');
     span.appendChild(el('i', `key-swatch ${cls}`));
-    span.append(label);
+    span.append(text);
     key.appendChild(span);
   }
-  view.appendChild(key);
+  board.appendChild(key);
 
-  if (!pro.isPro()) {
-    const upsell = el('p', 'control-note');
-    upsell.append('School holidays and weekly demand scoring are Pro. ');
-    const link = el('a', null, 'See what Pro adds');
-    link.href = '#pro';
-    upsell.appendChild(link);
-    upsell.append('.');
-    view.appendChild(upsell);
+  wrap.appendChild(board);
+}
+
+/**
+ * Perché un mercato non ha vacanze scolastiche a schermo. Restituisce null
+ * quando i dati ci sono davvero, così il segnalino compare solo dove serve.
+ */
+function schoolGapFor(code) {
+  const market = state.markets.get(code);
+  if (!market) return null;
+  if (state.events.some((ev) => ev.c === code && ev.type === 'school')) return null;
+  if (!market.school.length) {
+    return `No school-holiday data is published for ${marketName(code)} — public holidays only.`;
   }
+  return `School dates for ${marketName(code)} are not published this far ahead yet. Public holidays are complete.`;
+}
+
+function tooltipFor(ev) {
+  const when = ev.start === ev.end ? fmtDayYear(ev.start) : `${fmtDayYear(ev.start)} → ${fmtDayYear(ev.end)}`;
+  const who = ev.regions.length
+    ? `${ev.regions.length} region${ev.regions.length > 1 ? 's' : ''}: ${ev.regions.slice(0, 8).join(', ')}${ev.regions.length > 8 ? '…' : ''}`
+    : 'nationwide';
+  return `${marketName(ev.c)} · ${ev.type}\n${ev.name}\n${when}\n${who}`;
+}
+
+/* -- schede settimane migliori -- */
+
+function renderWeekCards() {
+  const box = $('#week-cards');
+  box.textContent = '';
+  const best = topWeeks(state.weeks, TOP_WEEKS);
+
+  if (!best.length) {
+    box.appendChild(el('p', 'view-empty', 'No scored weeks in this horizon.'));
+    return;
+  }
+
+  for (const week of best) {
+    const card = el('div', 'week-card');
+    const score = el('span', 'wk-score', `${week.scorePct}`);
+    card.appendChild(score);
+    card.appendChild(el('h4', null, `${fmtDay(week.start)} – ${fmtDayYear(week.end)}`));
+
+    const off = [...week.byCountry.entries()]
+      .filter(([, cell]) => cell.intensity > 0)
+      .sort((a, b) => b[1].value - a[1].value)
+      .slice(0, 5);
+
+    const who = el('p', 'wk-who');
+    if (off.length) {
+      who.append('Off: ');
+      off.forEach(([code, cell], i) => {
+        const label = cell.schoolCoverage > 0 ? `${Math.round(cell.schoolCoverage * 100)}% schools` : cell.bridge ? 'long weekend' : 'holiday';
+        const strong = el('b', null, `${marketFlag(code)} ${marketName(code)}`);
+        who.appendChild(strong);
+        who.append(` (${label})${i < off.length - 1 ? ', ' : ''}`);
+      });
+    } else {
+      who.append('Nothing scheduled.');
+    }
+    card.appendChild(who);
+
+    card.appendChild(el('p', 'wk-note', weekAdvice(week, off)));
+    box.appendChild(card);
+  }
+}
+
+/**
+ * Cosa farsene della settimana. Serve a distinguere i casi, non a riempire lo
+ * spazio: dire "diversi mercati si sovrappongono" su ogni scheda non aiuta
+ * nessuno. Conta chi porta il valore, non quanti sono in vacanza.
+ */
+function weekAdvice(week, off) {
+  if (!off.length) return 'Nothing scheduled — a week to fill with something other than holidays.';
+
+  const total = off.reduce((sum, [, cell]) => sum + cell.value, 0) || 1;
+  const [topCode, topCell] = off[0];
+  const share = topCell.value / total;
+  const strong = off.filter(([, cell]) => cell.intensity >= 0.5).length;
+
+  if (share >= 0.5) {
+    return `${marketName(topCode)} alone drives this week — worth a campaign aimed at it specifically.`;
+  }
+  if (strong >= 4) {
+    return `${strong} markets are properly off at once — hold your rate here rather than discount.`;
+  }
+  if (strong >= 2) {
+    return `${strong} markets overlap — good week for a minimum-stay rule.`;
+  }
+  return 'Partial holidays only — closer to a normal week than it looks.';
 }
 
 /* -- elenco date -- */
@@ -692,9 +973,7 @@ function renderList() {
   const table = el('table', 'data');
   const thead = el('thead');
   const hr = el('tr');
-  ['Market', 'Type', 'Dates', 'Nights', 'What', 'Share off', 'Regions'].forEach((h) =>
-    hr.appendChild(el('th', null, h)),
-  );
+  ['Market', 'Type', 'Dates', 'Nights', 'What', 'Share off', 'Regions'].forEach((h) => hr.appendChild(el('th', null, h)));
   thead.appendChild(hr);
   table.appendChild(thead);
 
@@ -706,9 +985,7 @@ function renderList() {
     const typeCell = el('td');
     typeCell.appendChild(el('span', `tag tag-${ev.type}`, ev.type));
     tr.appendChild(typeCell);
-    tr.appendChild(
-      el('td', null, ev.start === ev.end ? fmtDay(ev.start) : `${fmtDay(ev.start)} → ${fmtDay(ev.end)}`),
-    );
+    tr.appendChild(el('td', 'nowrap', ev.start === ev.end ? fmtDay(ev.start) : `${fmtDay(ev.start)} → ${fmtDay(ev.end)}`));
     tr.appendChild(el('td', 'num', ev.nights ? String(ev.nights) : '—'));
     tr.appendChild(el('td', null, ev.name));
     tr.appendChild(el('td', 'num', `${Math.round(ev.coverage * 100)}%`));
@@ -720,7 +997,7 @@ function renderList() {
 
   if (rows.length > MAX_LIST_ROWS) {
     view.appendChild(
-      el('p', 'control-note', `Showing the first ${MAX_LIST_ROWS} of ${rows.length} dates — the export contains all of them.`),
+      el('p', 'note', `Showing the first ${MAX_LIST_ROWS} of ${rows.length} dates — the export contains all of them.`),
     );
   }
 }
@@ -776,9 +1053,9 @@ function renderMarkets() {
   view.appendChild(
     el(
       'p',
-      'control-note',
+      'note',
       'Weighted reach discounts people by how hard it is for them to come: someone two hours away counts almost fully, ' +
-        `someone eight hours away counts about a fifth, and someone who has to fly counts at most ${Math.round(FLY_WEIGHT * 100)}%. ` +
+        `someone eight hours away about a fifth, and someone who has to fly at most ${Math.round(FLY_WEIGHT * 100)}%. ` +
         'It ranks markets against each other — it is not a forecast of bookings.',
     ),
   );
@@ -810,10 +1087,7 @@ function buildRows() {
 }
 
 function exportAs(format) {
-  if (format !== 'csv' && !pro.isPro()) {
-    document.querySelector('#pro').scrollIntoView({ behavior: 'smooth' });
-    return;
-  }
+  if (!state.unlocked) return;
   const rows = buildRows();
   if (!rows.length) return showError('Nothing to export yet.');
   const name = `holiday-radar-${slug(state.property.label)}-${state.from}-to-${state.to}`;
@@ -841,33 +1115,10 @@ function exportAs(format) {
     );
 }
 
-/* ---------- pro ---------- */
-
-async function onUnlock() {
-  const key = window.prompt('Paste your Holiday Radar Pro key (HR-XXXX-XXXX-XXXX):');
-  if (key === null) return;
-  const ok = await pro.unlock(key);
-  const status = $('#pro-status');
-  status.hidden = false;
-  status.textContent = ok
-    ? 'Pro unlocked — school holidays, demand scoring and all exports are on.'
-    : 'That key was not recognised. Check for typos, or get in touch if it should work.';
-}
-
-function reflectPro() {
-  const on = pro.isPro();
-  document.querySelectorAll('[data-pro]').forEach((btn) => btn.classList.toggle('is-locked', !on));
-  const status = $('#pro-status');
-  if (on) {
-    status.hidden = false;
-    status.textContent = 'Pro is active on this browser.';
-  }
-  if (!CHECKOUT_URL) $('#pro-cta').textContent = 'Join the waitlist';
-}
-
 /* ---------- persistenza ---------- */
 
 function persistState() {
+  if (!state.property) return;
   const payload = {
     label: state.property.label,
     detail: state.property.detail,
@@ -904,7 +1155,7 @@ function applySaved(saved) {
   if (Number.isFinite(saved.fly)) {
     state.maxFly = saved.fly;
     $('#fly-range').value = String(saved.fly);
-    $('#fly-out').innerHTML = saved.fly ? `${saved.fly.toLocaleString('en-GB')}&nbsp;km` : 'off';
+    $('#fly-out').textContent = saved.fly ? `${saved.fly.toLocaleString('en-GB')} km` : 'off';
   }
   if (saved.from) {
     state.from = saved.from;
@@ -914,7 +1165,7 @@ function applySaved(saved) {
     state.to = saved.to;
     $('#horizon-to').value = saved.to;
   }
-  clampHorizonToPlan();
+  clampHorizonToData();
 }
 
 function readStateFromURL() {
@@ -961,7 +1212,7 @@ function readStateFromStorage() {
 function setBusy(busy, message) {
   const btn = $('#search-btn');
   btn.disabled = busy;
-  btn.textContent = busy ? message || 'Working…' : 'Scan markets';
+  btn.textContent = busy ? message || 'Working…' : 'Go';
   if (busy) {
     btn.prepend(el('i', 'spinner'));
     showError(null);

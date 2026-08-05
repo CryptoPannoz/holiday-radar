@@ -1,23 +1,19 @@
 /**
- * Configurazione del prodotto. Unico file da toccare per collegare il pagamento
- * o cambiare i limiti del piano gratuito.
+ * Configurazione del prodotto. Unico file da toccare per collegare i contatti.
  */
 
 /**
- * Link di checkout (Stripe Payment Link, Lemon Squeezy, Gumroad...).
- * Finché è vuoto la pagina mostra un invito a scrivere invece di un bottone
- * che non porta da nessuna parte.
+ * Dove finisce chi clicca "Talk it through" in fondo ai risultati: la vendita
+ * di consulenza. Può essere un `mailto:`, un Calendly, un form.
+ * Finché è vuoto la sezione resta nascosta — meglio niente che un bottone morto.
  */
-export const CHECKOUT_URL = '';
+export const CONTACT_URL = '';
 
-/** Dove finisce chi vuole Pro prima che il checkout esista. */
-export const WAITLIST_URL = 'https://github.com/CryptoPannoz/holiday-radar/discussions';
+/** Quante settimane migliori mostrare come schede sotto la timeline. */
+export const TOP_WEEKS = 6;
 
-/** Cosa si può fare senza chiave. */
-export const FREE_LIMITS = {
-  markets: 5,
-  months: 12,
-  school: false,
-  calendarScore: false,
-  formats: ['csv'],
-};
+/**
+ * Quanti mesi copre l'orizzonte proposto all'apertura. I dati arrivano fino a
+ * due anni avanti, ma un anno è la finestra su cui un host pianifica davvero.
+ */
+export const DEFAULT_HORIZON_MONTHS = 12;

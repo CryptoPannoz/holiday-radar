@@ -7,7 +7,6 @@
   "license": "MIT",
   "scripts": {
     "build:data": "node scripts/build-data.mjs",
-    "keygen": "node scripts/keygen.mjs",
     "check": "node scripts/check.mjs",
     "dev": "python3 -m http.server 8080"
   }

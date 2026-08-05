@@ -109,3 +109,93 @@ export async function driveTimes(origin, destinations, { maxCrowKm = 1600, signa
 export function estimateDriveHours(crowKm) {
   return (crowKm * 1.28) / 88;
 }
+
+/* ---------- geometria per la forma del raggio di guida ---------- */
+
+const toDeg = (rad) => (rad * 180) / Math.PI;
+
+/** Rotta iniziale dal punto a al punto b, in gradi da nord. */
+export function bearing(a, b) {
+  const φ1 = toRad(a.lat);
+  const φ2 = toRad(b.lat);
+  const Δλ = toRad(b.lon - a.lon);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+/** Punto raggiunto partendo da `origin` per `km` lungo la rotta `deg`. */
+export function destination(origin, deg, km) {
+  const δ = km / 6371;
+  const θ = toRad(deg);
+  const φ1 = toRad(origin.lat);
+  const λ1 = toRad(origin.lon);
+  const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+  const λ2 =
+    λ1 +
+    Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+  return { lat: toDeg(φ2), lon: ((toDeg(λ2) + 540) % 360) - 180 };
+}
+
+/**
+ * Le città sotto questa distanza non dicono nulla di utile sulla velocità di
+ * percorrenza: un'ora per fare trenta chilometri di tangenziale non significa
+ * che in sei ore se ne facciano centottanta.
+ */
+const SPEED_SAMPLE_MIN_KM = 150;
+/** Ampiezza del cono entro cui una città informa la direzione che si sta stimando. */
+const ANGLE_SIGMA_DEG = 28;
+
+/**
+ * Forma della zona raggiungibile in auto entro `maxHours`.
+ *
+ * Non è un cerchio e non vuole esserlo: per ogni direzione si stima la velocità
+ * media effettiva usando le città realmente misurate in quel settore, pesate per
+ * quanto sono allineate. Il risultato si allunga lungo le autostrade e si
+ * strozza dove ci sono le montagne, che è esattamente la differenza fra questo
+ * strumento e un compasso puntato sulla mappa.
+ *
+ * Resta un'approssimazione — la frontiera vera si otterrebbe solo con
+ * un'isocrona calcolata sul grafo stradale — ed è etichettata come tale.
+ */
+export function driveReachShape(origin, cities, driveHours, maxHours, { steps = 72 } = {}) {
+  const samples = [];
+  cities.forEach((city, index) => {
+    const hours = driveHours?.get(index);
+    const crow = haversine(origin, city);
+    if (!hours || hours <= 0 || crow < SPEED_SAMPLE_MIN_KM) return;
+    samples.push({ deg: bearing(origin, city), speed: crow / hours });
+  });
+
+  if (samples.length < 3) return null;
+
+  const fallback = samples.reduce((sum, s) => sum + s.speed, 0) / samples.length;
+  const radii = [];
+
+  for (let i = 0; i < steps; i++) {
+    const deg = (i * 360) / steps;
+    let weighted = 0;
+    let total = 0;
+    for (const s of samples) {
+      let diff = Math.abs(s.deg - deg) % 360;
+      if (diff > 180) diff = 360 - diff;
+      const w = Math.exp(-((diff / ANGLE_SIGMA_DEG) ** 2));
+      weighted += s.speed * w;
+      total += w;
+    }
+    radii.push((total > 0.05 ? weighted / total : fallback) * maxHours);
+  }
+
+  // Smorzatura circolare: senza, una singola città isolata produce una punta.
+  const smooth = radii.map((_, i) => {
+    const a = radii[(i - 1 + steps) % steps];
+    const b = radii[i];
+    const c = radii[(i + 1) % steps];
+    return (a + 2 * b + c) / 4;
+  });
+
+  return smooth.map((km, i) => {
+    const p = destination(origin, (i * 360) / steps, Math.max(8, Math.min(2200, km)));
+    return [p.lat, p.lon];
+  });
+}
