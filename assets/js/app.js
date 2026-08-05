@@ -9,7 +9,7 @@
  */
 
 import { loadMeta, loadCities, loadAirports, loadMarket } from './data.js';
-import { geocode, reverseGeocode, driveTimes, haversine, flightHours, driveReachShape } from './geo.js';
+import { geocode, reverseGeocode, driveTimes, haversine, flightHours, driveReachShape, destination } from './geo.js';
 import {
   computeReach,
   buildEvents,
@@ -427,13 +427,27 @@ function fitMap() {
 
   const apply = () => {
     // invalidateSize PRIMA di inquadrare: se il contenitore non ha ancora le sue
-    // dimensioni definitive, Leaflet calcola lo zoom su una misura sbagliata e la
-    // mappa resta sullo zoom del mondo con i raggi grandi come una moneta.
+    // dimensioni definitive, Leaflet calcola lo zoom su una misura sbagliata.
     map.invalidateSize();
-    const target = layers.drive?.getBounds?.() || null;
-    const flyBounds = layers.fly?.getBounds?.() || null;
-    const bounds = target && flyBounds ? target.extend(flyBounds) : target || flyBounds;
-    if (bounds?.isValid?.()) map.fitBounds(bounds.pad(0.06));
+
+    // I limiti si costruiscono da coordinate geografiche calcolate da noi.
+    // `L.Circle.getBounds()` lavora in pixel sullo zoom corrente e, letto subito
+    // dopo un ridimensionamento, restituisce numeri assurdi: era quello a
+    // spedire la mappa sullo zoom del mondo.
+    const points = [[state.property.lat, state.property.lon]];
+
+    const shape = layers.drive?.getLatLngs?.()[0];
+    if (shape?.length) points.push(...shape.map((p) => [p.lat, p.lng]));
+
+    if (state.maxFly > 0) {
+      for (const deg of [0, 90, 180, 270]) {
+        const p = destination(state.property, deg, state.maxFly);
+        points.push([p.lat, p.lon]);
+      }
+    }
+
+    const bounds = L.latLngBounds(points);
+    if (bounds.isValid()) map.fitBounds(bounds.pad(0.04));
   };
 
   apply();
