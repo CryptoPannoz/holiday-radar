@@ -1,16 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Holiday Radar — find out when your guests are free to travel</title>
-<meta name="description" content="Free tool for short-term rental hosts. Drop your property on the map, set a drive-time and flight radius, and get the public holidays, bridge days and school holidays of every market that can actually reach you.">
+<title>Holiday Radar — quando sono liberi di viaggiare i tuoi ospiti</title>
+<meta name="description" content="Strumento gratuito per chi affitta case vacanza. Metti la tua casa sulla mappa, scegli quanto lontano arrivano gli ospiti in auto e in aereo, e ottieni festività, ponti e vacanze scolastiche di tutti i mercati che possono raggiungerti.">
 <meta name="theme-color" content="#0f766e">
+<meta name="author" content="Alberto Broggi">
+<link rel="canonical" href="https://bebroggi.it/tools/holiday-radar/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Holiday Radar — when are your guests free to travel?">
-<meta property="og:description" content="Drop your property on the map. Get the holiday calendar of every market within driving or flying distance. Free and open source.">
+<meta property="og:locale" content="it_IT">
+<meta property="og:site_name" content="Alberto Broggi">
+<meta property="og:title" content="Holiday Radar — quando sono liberi di viaggiare i tuoi ospiti">
+<meta property="og:description" content="Metti la tua casa sulla mappa e scopri il calendario delle vacanze di ogni mercato che può raggiungerti. Gratuito e open source.">
+<meta property="og:url" content="https://bebroggi.it/tools/holiday-radar/">
 
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -21,9 +26,9 @@
 <header class="site-header">
   <a class="brand" href="./"><span class="brand-mark">📡</span> Holiday&nbsp;Radar</a>
   <nav>
-    <a href="#how">How it works</a>
+    <a href="#come-funziona">Come funziona</a>
     <a href="https://github.com/CryptoPannoz/holiday-radar" rel="noopener">GitHub</a>
-    <button type="button" class="btn btn-small" id="account-btn">Sign in</button>
+    <button type="button" class="btn btn-small" id="account-btn">Accedi</button>
   </nav>
 </header>
 
@@ -33,31 +38,31 @@
 <section class="stage">
 
   <div class="stage-intro">
-    <h1>When are your guests <em>free to travel?</em></h1>
+    <h1>Quando sono liberi di viaggiare <em>i tuoi ospiti?</em></h1>
     <p class="lede">
-      Drop your property on the map, say how far people will travel to reach it, and see
-      every day off in every market that can. Your neighbours' school holidays predict
-      your calendar better than your own do.
+      Metti la tua casa sulla mappa, dì quanto lontano arriva chi viene a trovarti, e guarda
+      tutti i giorni di vacanza dei mercati che possono raggiungerti. Le vacanze scolastiche
+      dei tuoi vicini di frontiera prevedono il tuo calendario meglio di quelle italiane.
     </p>
   </div>
 
   <div class="map-wrap">
-    <div id="map" role="application" aria-label="Map of your property and its reachable markets"></div>
+    <div id="map" role="application" aria-label="Mappa della tua casa e dei mercati raggiungibili"></div>
 
     <div class="map-search" id="map-search">
       <form id="search-form" autocomplete="off">
-        <label for="address"><span class="step-num">1</span> Where is your property?</label>
+        <label for="address"><span class="step-num">1</span> Dov'è la tua casa?</label>
         <div class="search-row">
           <div class="field field-grow">
-            <input type="text" id="address" placeholder="e.g. Via Novara 38, Orta San Giulio" required>
+            <input type="text" id="address" placeholder="es. Via Novara 38, Orta San Giulio" required>
             <ul class="suggestions" id="suggestions" hidden></ul>
           </div>
-          <button type="submit" class="btn btn-primary" id="search-btn">Go</button>
+          <button type="submit" class="btn btn-primary" id="search-btn">Vai</button>
         </div>
         <p class="search-hint">
-          <button type="button" class="linklike" id="use-example">try Villa Volpe, Lake Orta</button> ·
-          <button type="button" class="linklike" id="use-locate">use my location</button> ·
-          or click the map
+          <button type="button" class="linklike" id="use-example">prova con Villa Volpe, Lago d'Orta</button> ·
+          <button type="button" class="linklike" id="use-locate">usa la mia posizione</button> ·
+          oppure clicca sulla mappa
         </p>
         <p class="search-error" id="search-error" hidden></p>
       </form>
@@ -66,41 +71,41 @@
     <div class="map-badge" id="map-badge" hidden></div>
 
     <div class="map-key" id="map-key" hidden>
-      <span><i class="key-dot key-home"></i> your property</span>
-      <span><i class="key-area key-drive"></i> drive reach</span>
-      <span><i class="key-area key-fly"></i> flight reach</span>
+      <span><i class="key-dot key-home"></i> la tua casa</span>
+      <span><i class="key-area key-drive"></i> raggio in auto</span>
+      <span><i class="key-area key-fly"></i> raggio in aereo</span>
     </div>
   </div>
 
-  <!-- ============ 2-4. RAGGI E ORIZZONTE ============ -->
+  <!-- ============ 2-4. RAGGI E PERIODO ============ -->
   <div class="stepbar" id="stepbar" hidden>
 
     <div class="step step-drive">
       <div class="step-head">
-        <label for="drive-range"><span class="step-num">2</span> <span class="step-icon">🚗</span> Drive radius</label>
+        <label for="drive-range"><span class="step-num">2</span> <span class="step-icon">🚗</span> Raggio in auto</label>
         <output id="drive-out">6h</output>
       </div>
       <input type="range" id="drive-range" min="1" max="14" step="0.5" value="6">
-      <p class="step-note" id="drive-note">Shape follows real road times, not a circle.</p>
+      <p class="step-note" id="drive-note">La forma segue i tempi di strada reali, non è un cerchio.</p>
     </div>
 
     <div class="step step-fly">
       <div class="step-head">
-        <label for="fly-range"><span class="step-num">3</span> <span class="step-icon">✈️</span> Flight radius</label>
-        <output id="fly-out">1,500 km</output>
+        <label for="fly-range"><span class="step-num">3</span> <span class="step-icon">✈️</span> Raggio in aereo</label>
+        <output id="fly-out">1.500 km</output>
       </div>
       <input type="range" id="fly-range" min="0" max="3000" step="100" value="1500">
-      <p class="step-note" id="fly-note">Straight-line distance from your property.</p>
+      <p class="step-note" id="fly-note">Distanza in linea d'aria dalla tua casa.</p>
     </div>
 
     <div class="step step-horizon">
       <div class="step-head">
-        <label for="horizon-from"><span class="step-num">4</span> <span class="step-icon">🗓️</span> Horizon</label>
+        <label for="horizon-from"><span class="step-num">4</span> <span class="step-icon">🗓️</span> Periodo</label>
       </div>
       <div class="horizon">
-        <input type="month" id="horizon-from" aria-label="Horizon start">
+        <input type="month" id="horizon-from" aria-label="Inizio del periodo">
         <span>→</span>
-        <input type="month" id="horizon-to" aria-label="Horizon end">
+        <input type="month" id="horizon-to" aria-label="Fine del periodo">
       </div>
       <p class="step-note" id="horizon-note"></p>
     </div>
@@ -110,11 +115,11 @@
   <!-- ============ 5. MERCATI ============ -->
   <div class="markets-bar" id="markets-bar" hidden>
     <div class="markets-head">
-      <label><span class="step-num">5</span> Markets — pick as many as you like</label>
+      <label><span class="step-num">5</span> Mercati — scegline quanti vuoi</label>
       <span class="markets-actions">
-        <button type="button" class="linklike" id="markets-reset">within my radius</button> ·
-        <button type="button" class="linklike" id="markets-all">all 30</button> ·
-        <button type="button" class="linklike" id="markets-none">none</button>
+        <button type="button" class="linklike" id="markets-reset">solo quelli nel raggio</button> ·
+        <button type="button" class="linklike" id="markets-all">tutti e 30</button> ·
+        <button type="button" class="linklike" id="markets-none">nessuno</button>
       </span>
     </div>
     <div class="chips" id="market-chips"></div>
@@ -122,7 +127,7 @@
 
 </section>
 
-<!-- ============ RISULTATI (sfocati finché non c'è login) ============ -->
+<!-- ============ RISULTATI (sfocati finché non c'è accesso) ============ -->
 <section class="results-section" id="results-section" hidden>
 
   <div class="results-inner" id="results-inner">
@@ -131,63 +136,64 @@
 
     <div class="panel">
       <div class="panel-head">
-        <h2>Opportunity calendar</h2>
-        <p>Where the bars overlap, several markets are off at once. Where a bar stands alone, one campaign has the week to itself.</p>
+        <h2>Calendario delle occasioni</h2>
+        <p>Dove le barre si sovrappongono, più mercati sono in vacanza insieme. Dove una barra è sola, quella settimana è tutta per una campagna mirata.</p>
       </div>
       <div class="timeline-wrap" id="timeline"></div>
     </div>
 
     <div class="panel">
-      <div class="panel-head"><h2>Best weeks ahead</h2></div>
+      <div class="panel-head"><h2>Le settimane migliori in arrivo</h2></div>
       <div class="week-cards" id="week-cards"></div>
     </div>
 
     <div class="panel">
       <div class="tabs" role="tablist">
-        <button class="tab is-active" data-view="list" role="tab">All dates</button>
-        <button class="tab" data-view="markets" role="tab">Market breakdown</button>
+        <button class="tab is-active" data-view="list" role="tab">Tutte le date</button>
+        <button class="tab" data-view="markets" role="tab">Dettaglio mercati</button>
       </div>
       <div class="view" id="view-list"></div>
       <div class="view" id="view-markets" hidden></div>
     </div>
 
     <div class="exports">
-      <button type="button" class="btn" id="export-csv">Export CSV</button>
-      <button type="button" class="btn" id="export-ics">Export calendar (.ics)</button>
-      <button type="button" class="btn" id="export-json">Export JSON</button>
+      <button type="button" class="btn" id="export-csv">Esporta CSV</button>
+      <button type="button" class="btn" id="export-ics">Esporta calendario (.ics)</button>
+      <button type="button" class="btn" id="export-json">Esporta JSON</button>
     </div>
 
   </div>
 
-  <!-- il cancello: non è sicurezza, è un modo per sapere chi usa il tool -->
+  <!-- il cancello: non è sicurezza, è un modo per sapere chi usa lo strumento -->
   <div class="gate" id="gate" hidden>
     <div class="gate-card">
-      <h2>Your results are ready</h2>
+      <h2>I tuoi risultati sono pronti</h2>
       <p class="gate-lede" id="gate-lede">
-        Sign in and everything below unlocks — school holidays region by region, the weekly
-        demand score, and all exports. It is free, and it stays free.
+        Accedi e si sblocca tutto quello che c'è sotto: vacanze scolastiche regione per
+        regione, punteggio settimanale della domanda e tutte le esportazioni. È gratis, e
+        resta gratis.
       </p>
       <div class="gate-actions">
         <button type="button" class="btn btn-primary btn-google" id="signin-google">
-          <span class="g-mark">G</span> Continue with Google
+          <span class="g-mark">G</span> Continua con Google
         </button>
         <form class="gate-email" id="email-form">
-          <input type="email" id="email-input" placeholder="you@example.com" required aria-label="Your email">
-          <button type="submit" class="btn">Email me a link</button>
+          <input type="email" id="email-input" placeholder="tu@esempio.it" required aria-label="La tua email">
+          <button type="submit" class="btn">Mandami un link</button>
         </form>
       </div>
       <p class="gate-status" id="gate-status" hidden></p>
       <p class="gate-fine">
-        I keep your email address and the searches you run, so I know who finds this useful
-        and can tell you when it improves. Nothing is sold on or passed to advertisers, and
-        you can ask me to delete it at any time.
+        Conservo il tuo indirizzo email e le ricerche che fai, così so a chi è utile questo
+        strumento e posso avvisarti quando migliora. Non vendo niente a nessuno e non passo
+        i dati a inserzionisti; puoi chiedermi di cancellarli quando vuoi.
         <br>
-        Rather not? The whole thing is open source —
-        <a href="https://github.com/CryptoPannoz/holiday-radar" rel="noopener">clone it and run it yourself</a>,
-        no sign-in, no limits.
+        Preferisci di no? È tutto open source —
+        <a href="https://github.com/CryptoPannoz/holiday-radar" rel="noopener">scaricalo ed eseguilo da te</a>,
+        senza accesso e senza limiti.
       </p>
       <p class="gate-fallback" id="gate-fallback" hidden>
-        <button type="button" class="linklike" id="gate-skip">Continue without signing in</button>
+        <button type="button" class="linklike" id="gate-skip">Continua senza accedere</button>
       </p>
     </div>
   </div>
@@ -197,50 +203,50 @@
 <!-- ============ CONSULENZA ============ -->
 <section class="cta" id="cta" hidden>
   <div class="cta-inner">
-    <h2>Knowing the dates is the easy half</h2>
+    <h2>Sapere le date è la metà facile</h2>
     <p>
-      Turning them into rates, minimum stays and a listing that shows up in the right
-      language is the other half. If you would rather have someone do that with you for
-      your property, say hello.
+      Trasformarle in tariffe, soggiorni minimi e un annuncio che esce nella lingua giusta
+      è l'altra metà. Se preferisci che qualcuno lo faccia insieme a te sulla tua casa,
+      scrivimi.
     </p>
-    <a class="btn btn-primary" id="cta-link" href="#cta">Talk it through</a>
+    <a class="btn btn-primary" id="cta-link" href="#cta">Parliamone</a>
   </div>
 </section>
 
-<section class="how" id="how">
-  <h2>How it works</h2>
+<section class="how" id="come-funziona">
+  <h2>Come funziona</h2>
   <div class="how-grid">
     <div>
-      <h3>1 · Who can reach you</h3>
+      <h3>1 · Chi può raggiungerti</h3>
       <p>
-        Real driving times to 131 European metro areas, measured through the road network.
-        The drive shape on the map is interpolated from those measurements, so it stretches
-        along motorways and pinches where mountains get in the way — an 8-hour circle around
-        Lake Orta contains Paris, the motorway does not (Paris is 9h 12m).
+        I tempi di guida verso 131 aree metropolitane europee sono misurati sulla rete
+        stradale vera. La forma disegnata sulla mappa è interpolata da quelle misure: si
+        allunga lungo le autostrade e si strozza dove ci sono le montagne. Un cerchio di
+        otto ore attorno al Lago d'Orta contiene Parigi; l'autostrada no, Parigi è a 9h 12m.
       </p>
     </div>
     <div>
-      <h3>2 · When they are off</h3>
+      <h3>2 · Quando sono liberi</h3>
       <p>
-        Public holidays and bridge days from Nager.Date, school holidays from the
-        OpenHolidays API with regional detail where it exists. Germany's sixteen
-        <i>Länder</i> and France's three zones stagger their school breaks on purpose,
-        which is exactly what makes them bookable.
+        Festività e ponti da Nager.Date, vacanze scolastiche da OpenHolidays con il
+        dettaglio regionale dove esiste. I sedici <i>Länder</i> tedeschi e le tre zone
+        francesi sfalsano apposta le vacanze scolastiche, ed è proprio questo che le rende
+        aggredibili una alla volta.
       </p>
     </div>
     <div>
-      <h3>3 · Where the money is</h3>
+      <h3>3 · Dove stanno i soldi</h3>
       <p>
-        Each week is scored by how many reachable people are actually off. A week when one
-        nearby region breaks is a targeted campaign; a week when four break at once is a
-        price increase.
+        Ogni settimana ha un punteggio in base a quante persone raggiungibili sono
+        davvero libere. Una settimana in cui si ferma una sola regione vicina è una
+        campagna mirata; una in cui se ne fermano quattro insieme è un aumento di prezzo.
       </p>
     </div>
   </div>
   <p class="how-foot">
-    Everything is computed in your browser. The address you type goes to a geocoder to become
-    coordinates, and your property's coordinates go to a routing service to measure drive
-    times — nothing else leaves your machine.
+    Tutti i calcoli avvengono nel tuo browser. L'indirizzo che scrivi va a un servizio di
+    geocodifica per diventare coordinate, e le coordinate della casa vanno a un servizio di
+    navigazione per misurare i tempi di guida: nient'altro esce dal tuo computer.
   </p>
 </section>
 
@@ -248,16 +254,19 @@
 
 <footer class="site-footer">
   <p>
-    Holiday data: <a href="https://date.nager.at" rel="noopener">Nager.Date</a> ·
+    Dati sulle vacanze: <a href="https://date.nager.at" rel="noopener">Nager.Date</a> ·
     <a href="https://openholidaysapi.org" rel="noopener">OpenHolidays API</a>.
-    Routing: <a href="https://project-osrm.org" rel="noopener">OSRM</a>.
-    Geocoding &amp; maps: <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors.
+    Percorsi: <a href="https://project-osrm.org" rel="noopener">OSRM</a>.
+    Geocodifica e mappe: contributori <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>.
   </p>
   <p>
-    Dates change and sources occasionally lag: confirm against an official source before
-    committing money to a campaign. <span id="data-stamp"></span>
+    Le date cambiano e le fonti a volte sono in ritardo: verifica su una fonte ufficiale
+    prima di investire soldi in una campagna. <span id="data-stamp"></span>
   </p>
-  <p>Open source, MIT. Built by a host, for hosts.</p>
+  <p>
+    Open source, licenza MIT. Fatto da un host, per gli host —
+    <a href="https://bebroggi.it/it/">Alberto Broggi</a>.
+  </p>
 </footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>

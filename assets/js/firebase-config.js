@@ -22,8 +22,8 @@
 
 export const firebaseConfig = {
   apiKey: '',
-  authDomain: '',
-  projectId: '',
+  authDomain: 'str-holiday-radar.firebaseapp.com',
+  projectId: 'str-holiday-radar',
   appId: '',
 };
 

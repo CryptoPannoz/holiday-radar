@@ -84,7 +84,7 @@ async function completeEmailLinkSignIn(authMod) {
     /* storage bloccato */
   }
   // Aprire il link su un dispositivo diverso da quello che l'ha chiesto è normale.
-  if (!email) email = window.prompt('Confirm the email address this link was sent to:');
+  if (!email) email = window.prompt('Conferma l\'indirizzo email a cui è stato inviato il link:');
   if (!email) return;
 
   await authMod.signInWithEmailLink(auth, email, window.location.href);

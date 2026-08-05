@@ -17,7 +17,7 @@
     },
     {
       "c": "BE",
-      "name": "Belgium",
+      "name": "Belgio",
       "flag": "🇧🇪",
       "publicCount": 42,
       "bridgeCount": 20,
@@ -35,7 +35,7 @@
     },
     {
       "c": "HR",
-      "name": "Croatia",
+      "name": "Croazia",
       "flag": "🇭🇷",
       "publicCount": 42,
       "bridgeCount": 22,
@@ -43,17 +43,8 @@
       "subdivisions": 0
     },
     {
-      "c": "CZ",
-      "name": "Czechia",
-      "flag": "🇨🇿",
-      "publicCount": 39,
-      "bridgeCount": 21,
-      "schoolCount": 32,
-      "subdivisions": 14
-    },
-    {
       "c": "DK",
-      "name": "Denmark",
+      "name": "Danimarca",
       "flag": "🇩🇰",
       "publicCount": 42,
       "bridgeCount": 13,
@@ -71,7 +62,7 @@
     },
     {
       "c": "FI",
-      "name": "Finland",
+      "name": "Finlandia",
       "flag": "🇫🇮",
       "publicCount": 45,
       "bridgeCount": 19,
@@ -80,7 +71,7 @@
     },
     {
       "c": "FR",
-      "name": "France",
+      "name": "Francia",
       "flag": "🇫🇷",
       "publicCount": 33,
       "bridgeCount": 22,
@@ -89,7 +80,7 @@
     },
     {
       "c": "DE",
-      "name": "Germany",
+      "name": "Germania",
       "flag": "🇩🇪",
       "publicCount": 58,
       "bridgeCount": 16,
@@ -98,7 +89,7 @@
     },
     {
       "c": "GR",
-      "name": "Greece",
+      "name": "Grecia",
       "flag": "🇬🇷",
       "publicCount": 45,
       "bridgeCount": 20,
@@ -106,17 +97,8 @@
       "subdivisions": 0
     },
     {
-      "c": "HU",
-      "name": "Hungary",
-      "flag": "🇭🇺",
-      "publicCount": 39,
-      "bridgeCount": 18,
-      "schoolCount": 3,
-      "subdivisions": 0
-    },
-    {
       "c": "IE",
-      "name": "Ireland",
+      "name": "Irlanda",
       "flag": "🇮🇪",
       "publicCount": 33,
       "bridgeCount": 24,
@@ -125,7 +107,7 @@
     },
     {
       "c": "IT",
-      "name": "Italy",
+      "name": "Italia",
       "flag": "🇮🇹",
       "publicCount": 42,
       "bridgeCount": 19,
@@ -134,7 +116,7 @@
     },
     {
       "c": "LV",
-      "name": "Latvia",
+      "name": "Lettonia",
       "flag": "🇱🇻",
       "publicCount": 49,
       "bridgeCount": 20,
@@ -143,7 +125,7 @@
     },
     {
       "c": "LT",
-      "name": "Lithuania",
+      "name": "Lituania",
       "flag": "🇱🇹",
       "publicCount": 42,
       "bridgeCount": 21,
@@ -152,7 +134,7 @@
     },
     {
       "c": "LU",
-      "name": "Luxembourg",
+      "name": "Lussemburgo",
       "flag": "🇱🇺",
       "publicCount": 36,
       "bridgeCount": 20,
@@ -169,17 +151,8 @@
       "subdivisions": 0
     },
     {
-      "c": "NL",
-      "name": "Netherlands",
-      "flag": "🇳🇱",
-      "publicCount": 27,
-      "bridgeCount": 16,
-      "schoolCount": 28,
-      "subdivisions": 12
-    },
-    {
       "c": "NO",
-      "name": "Norway",
+      "name": "Norvegia",
       "flag": "🇳🇴",
       "publicCount": 36,
       "bridgeCount": 15,
@@ -187,8 +160,17 @@
       "subdivisions": 0
     },
     {
+      "c": "NL",
+      "name": "Paesi Bassi",
+      "flag": "🇳🇱",
+      "publicCount": 27,
+      "bridgeCount": 16,
+      "schoolCount": 28,
+      "subdivisions": 12
+    },
+    {
       "c": "PL",
-      "name": "Poland",
+      "name": "Polonia",
       "flag": "🇵🇱",
       "publicCount": 42,
       "bridgeCount": 19,
@@ -197,12 +179,30 @@
     },
     {
       "c": "PT",
-      "name": "Portugal",
+      "name": "Portogallo",
       "flag": "🇵🇹",
       "publicCount": 48,
       "bridgeCount": 23,
       "schoolCount": 18,
       "subdivisions": 20
+    },
+    {
+      "c": "GB",
+      "name": "Regno Unito",
+      "flag": "🇬🇧",
+      "publicCount": 40,
+      "bridgeCount": 12,
+      "schoolCount": 0,
+      "subdivisions": 0
+    },
+    {
+      "c": "CZ",
+      "name": "Repubblica Ceca",
+      "flag": "🇨🇿",
+      "publicCount": 39,
+      "bridgeCount": 21,
+      "schoolCount": 32,
+      "subdivisions": 14
     },
     {
       "c": "RO",
@@ -224,7 +224,7 @@
     },
     {
       "c": "SK",
-      "name": "Slovakia",
+      "name": "Slovacchia",
       "flag": "🇸🇰",
       "publicCount": 37,
       "bridgeCount": 17,
@@ -242,7 +242,7 @@
     },
     {
       "c": "ES",
-      "name": "Spain",
+      "name": "Spagna",
       "flag": "🇪🇸",
       "publicCount": 95,
       "bridgeCount": 19,
@@ -251,7 +251,7 @@
     },
     {
       "c": "SE",
-      "name": "Sweden",
+      "name": "Svezia",
       "flag": "🇸🇪",
       "publicCount": 48,
       "bridgeCount": 21,
@@ -260,7 +260,7 @@
     },
     {
       "c": "CH",
-      "name": "Switzerland",
+      "name": "Svizzera",
       "flag": "🇨🇭",
       "publicCount": 63,
       "bridgeCount": 8,
@@ -268,12 +268,12 @@
       "subdivisions": 26
     },
     {
-      "c": "GB",
-      "name": "United Kingdom",
-      "flag": "🇬🇧",
-      "publicCount": 40,
-      "bridgeCount": 12,
-      "schoolCount": 0,
+      "c": "HU",
+      "name": "Ungheria",
+      "flag": "🇭🇺",
+      "publicCount": 39,
+      "bridgeCount": 18,
+      "schoolCount": 3,
       "subdivisions": 0
     }
   ],

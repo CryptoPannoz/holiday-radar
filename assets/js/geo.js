@@ -38,7 +38,7 @@ export function flightHours(km) {
 export async function geocode(query, { limit = 6, signal } = {}) {
   const url = `${PHOTON}?q=${encodeURIComponent(query)}&limit=${limit}&lang=en`;
   const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`Geocoder unavailable (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`Servizio di geocodifica non disponibile (HTTP ${res.status})`);
   const data = await res.json();
   return (data.features || [])
     .filter((f) => f.geometry?.coordinates?.length === 2)
@@ -89,9 +89,9 @@ export async function driveTimes(origin, destinations, { maxCrowKm = 1600, signa
     .join(';');
 
   const res = await fetch(`${OSRM}/table/v1/driving/${coords}?sources=0&annotations=duration`, { signal });
-  if (!res.ok) throw new Error(`Routing service unavailable (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`Servizio percorsi non disponibile (HTTP ${res.status})`);
   const data = await res.json();
-  if (data.code !== 'Ok' || !data.durations?.[0]) throw new Error('Routing service returned no result');
+  if (data.code !== 'Ok' || !data.durations?.[0]) throw new Error('Il servizio percorsi non ha restituito risultati');
 
   const row = data.durations[0];
   candidates.forEach((c, i) => {

@@ -8,6 +8,7 @@
   "scripts": {
     "build:data": "node scripts/build-data.mjs",
     "check": "node scripts/check.mjs",
-    "dev": "python3 -m http.server 8080"
+    "dev": "python3 -m http.server 8080",
+    "deploy:site": "node scripts/deploy-site.mjs"
   }
 }

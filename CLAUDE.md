@@ -4,12 +4,18 @@ Tool pubblico e open source per host di affitti brevi: dato l'indirizzo di una c
 dice quando sono in vacanza i mercati che possono davvero raggiungerla.
 
 - **Repo**: `CryptoPannoz/holiday-radar` (pubblico)
-- **Deploy**: GitHub Pages da `main`, cartella root. Push su `main` = deploy.
+- **Versione pubblica**: https://bebroggi.it/tools/holiday-radar/ — vive dentro la repo
+  `alberto-broggi-site`, sotto `tools/holiday-radar/`.
+- **Questa repo** è la fonte del codice e la copia open source. Dopo ogni modifica:
+  `npm run deploy:site`, poi commit e push **anche** del sito.
+- **GitHub Pages** di questa repo resta come specchio; il canonical dell'HTML punta
+  a bebroggi.it, quindi non fa concorrenza a sé stesso sui motori di ricerca.
 - **Stack**: HTML + CSS + JavaScript a moduli ES. Nessun framework, nessun build step.
   Node serve solo per gli script in `scripts/`. Firebase si carica da CDN solo se
   configurato.
-- **Lingua dell'interfaccia**: inglese (è un prodotto internazionale). I commenti nel
-  codice sono in italiano, come nel resto del workspace.
+- **Lingua dell'interfaccia**: italiano (`lang="it"`, date con locale `it-IT`, nomi di
+  paesi e città in italiano dentro `scripts/geo-source.mjs`). Anche i commenti nel
+  codice sono in italiano.
 
 ## Il flusso, in ordine
 

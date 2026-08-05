@@ -70,9 +70,9 @@ const fmtPeople = (thousands) => {
 };
 
 const fmtDay = (iso) =>
-  parseDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  parseDate(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const fmtDayYear = (iso) =>
-  parseDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  parseDate(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 const monthValue = (date) => date.toISOString().slice(0, 7);
 const monthStart = (value) => `${value}-01`;
@@ -96,10 +96,10 @@ async function init() {
 
   try {
     [state.meta, state.cities, state.airports] = await Promise.all([loadMeta(), loadCities(), loadAirports()]);
-    $('#data-stamp').textContent = `Holiday data refreshed ${state.meta.generatedAt}.`;
+    $('#data-stamp').textContent = `Dati aggiornati al ${state.meta.generatedAt}.`;
     clampHorizonToData();
   } catch (err) {
-    showError(`Could not load the holiday database. ${err.message}`);
+    showError(`Non riesco a caricare l'archivio delle vacanze. ${err.message}`);
     return;
   }
 
@@ -131,7 +131,7 @@ function clampHorizonToData() {
   $('#horizon-to').max = max;
   if (state.from < min) state.from = $('#horizon-from').value = min;
   if (state.to > max) state.to = $('#horizon-to').value = max;
-  $('#horizon-note').textContent = `Data available through ${years[years.length - 1]}.`;
+  $('#horizon-note').textContent = `Dati disponibili fino a tutto il ${years[years.length - 1]}.`;
 }
 
 function wireEvents() {
@@ -143,7 +143,7 @@ function wireEvents() {
   });
 
   $('#use-example').addEventListener('click', () =>
-    setProperty({ label: 'Villa Volpe', detail: 'Orta San Giulio, Piedmont, Italy', lat: 45.7975, lon: 8.4186 }),
+    setProperty({ label: 'Villa Volpe', detail: 'Orta San Giulio, Piemonte', lat: 45.7975, lon: 8.4186 }),
   );
   $('#use-locate').addEventListener('click', onLocate);
 
@@ -155,10 +155,10 @@ function wireEvents() {
   });
   $('#fly-range').addEventListener('input', (e) => {
     state.maxFly = Number(e.target.value);
-    $('#fly-out').textContent = state.maxFly ? `${state.maxFly.toLocaleString('en-GB')} km` : 'off';
+    $('#fly-out').textContent = state.maxFly ? `${state.maxFly.toLocaleString('it-IT')} km` : 'spento';
     $('#fly-note').textContent = state.maxFly
-      ? `Straight line — roughly ${fmtHours(flightHours(state.maxFly))} door to door.`
-      : 'Flight markets excluded.';
+      ? `In linea d'aria — circa ${fmtHours(flightHours(state.maxFly))} porta a porta.`
+      : 'Mercati aerei esclusi.';
     drawRadii();
     scheduleRadiusUpdate();
   });
@@ -212,7 +212,7 @@ async function initAuth() {
     // Firebase non ancora collegato: il tool non deve risultare rotto per questo.
     $('#gate-fallback').hidden = false;
     $('#gate-lede').textContent =
-      'Sign-in is not switched on yet for this deployment, so everything is open. Carry on.';
+      'L\'accesso non è ancora attivo su questa installazione: è tutto aperto, procedi pure.';
     $('#signin-google').disabled = true;
     $('#email-form').hidden = true;
     $('#account-btn').hidden = true;
@@ -221,11 +221,11 @@ async function initAuth() {
   auth.onUserChange((user) => {
     if (user) {
       unlock({ signedIn: true });
-      $('#account-btn').textContent = user.email ? user.email.split('@')[0] : 'Signed in';
-      $('#account-btn').title = `Signed in as ${user.email || 'unknown'} — click to sign out`;
+      $('#account-btn').textContent = user.email ? user.email.split('@')[0] : 'Accesso fatto';
+      $('#account-btn').title = `Accesso come ${user.email || 'sconosciuto'} — clicca per uscire`;
     } else {
       state.unlocked = false;
-      $('#account-btn').textContent = 'Sign in';
+      $('#account-btn').textContent = 'Accedi';
       $('#account-btn').title = '';
       applyGate();
     }
@@ -234,7 +234,7 @@ async function initAuth() {
 }
 
 async function onGoogleSignIn() {
-  setGateStatus('Opening Google…');
+  setGateStatus('Apro Google…');
   try {
     await auth.signInWithGoogle();
   } catch (err) {
@@ -246,10 +246,10 @@ async function onEmailSignIn(e) {
   e.preventDefault();
   const email = $('#email-input').value.trim();
   if (!email) return;
-  setGateStatus('Sending…');
+  setGateStatus('Invio…');
   try {
     await auth.sendEmailLink(email);
-    setGateStatus(`Link sent to ${email}. Open it on this device and you are in.`);
+    setGateStatus(`Link inviato a ${email}. Aprilo su questo dispositivo e sei dentro.`);
   } catch (err) {
     setGateStatus(friendlyAuthError(err), true);
   }
@@ -257,11 +257,11 @@ async function onEmailSignIn(e) {
 
 function friendlyAuthError(err) {
   const code = err?.code || '';
-  if (code.includes('unauthorized-domain')) return 'This domain is not authorised in the Firebase project yet.';
-  if (code.includes('operation-not-allowed')) return 'That sign-in method is not enabled in the Firebase project.';
-  if (code.includes('invalid-email')) return 'That email address does not look right.';
-  if (code.includes('network')) return 'Network problem — check the connection and try again.';
-  return err?.message || 'Sign-in failed.';
+  if (code.includes('unauthorized-domain')) return 'Questo dominio non è ancora autorizzato nel progetto Firebase.';
+  if (code.includes('operation-not-allowed')) return 'Questo metodo di accesso non è abilitato nel progetto Firebase.';
+  if (code.includes('invalid-email')) return 'Questo indirizzo email non sembra valido.';
+  if (code.includes('network')) return 'Problema di rete — controlla la connessione e riprova.';
+  return err?.message || 'Accesso non riuscito.';
 }
 
 function setGateStatus(message, isError = false) {
@@ -337,7 +337,7 @@ function initMap() {
     const { lat, lng: lon } = e.latlng;
     const place = (await reverseGeocode(lat, lon)) || {
       label: `${lat.toFixed(3)}, ${lon.toFixed(3)}`,
-      detail: 'dropped pin',
+      detail: 'punto sulla mappa',
       lat,
       lon,
     };
@@ -502,10 +502,10 @@ async function onSubmit(e) {
   hideSuggestions();
   const query = $('#address').value.trim();
   if (!query) return;
-  setBusy(true, 'Finding…');
+  setBusy(true, 'Cerco…');
   try {
     const results = await geocode(query, { limit: 1 });
-    if (!results.length) throw new Error('No place matched that address. Try adding the town or country.');
+    if (!results.length) throw new Error('Nessun luogo corrisponde a questo indirizzo. Prova ad aggiungere il comune o la nazione.');
     await setProperty(results[0]);
   } catch (err) {
     showError(err.message);
@@ -514,16 +514,16 @@ async function onSubmit(e) {
 }
 
 function onLocate() {
-  if (!navigator.geolocation) return showError('This browser cannot share a location.');
-  setBusy(true, 'Locating…');
+  if (!navigator.geolocation) return showError('Questo browser non può condividere la posizione.');
+  setBusy(true, 'Localizzo…');
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
-      const place = (await reverseGeocode(lat, lon)) || { label: 'My location', detail: '', lat, lon };
+      const place = (await reverseGeocode(lat, lon)) || { label: 'La mia posizione', detail: '', lat, lon };
       await setProperty(place);
     },
     () => {
-      showError('Location permission denied.');
+      showError('Permesso di geolocalizzazione negato.');
       setBusy(false);
     },
     { timeout: 10000 },
@@ -535,7 +535,7 @@ function onLocate() {
 async function setProperty(place, { silent = false } = {}) {
   state.property = place;
   showError(null);
-  setBusy(true, 'Measuring…');
+  setBusy(true, 'Misuro…');
 
   try {
     state.driveHours = await driveTimes(place, state.cities);
@@ -573,11 +573,11 @@ function renderPropertyBadge() {
   badge.appendChild(el('span', null, state.property.detail || `${state.property.lat.toFixed(3)}, ${state.property.lon.toFixed(3)}`));
   if (state.nearAirports[0]) {
     badge.appendChild(
-      el('span', null, `Nearest hub: ${state.nearAirports[0].i} · ${Math.round(state.nearAirports[0].crowKm)} km`),
+      el('span', null, `Aeroporto più vicino: ${state.nearAirports[0].i} · ${Math.round(state.nearAirports[0].crowKm)} km`),
     );
   }
   if (state.routingEstimated) {
-    badge.appendChild(el('span', 'muted', 'Routing unavailable — drive times estimated.'));
+    badge.appendChild(el('span', 'muted', 'Servizio percorsi non raggiungibile — tempi di guida stimati.'));
   }
 }
 
@@ -712,12 +712,12 @@ function renderSummary() {
   const schoolWeeks = state.weeks.filter((w) => [...w.byCountry.values()].some((c) => c.schoolCoverage > 0)).length;
 
   const stats = [
-    [String(state.selected.size), 'markets selected'],
-    [fmtPeople(drivePop), `people within ${fmtHours(state.maxDrive)} drive`],
-    [fmtPeople(flyPop), `more within ${state.maxFly.toLocaleString('en-GB')} km flight`],
-    [String(state.events.length), 'dates in horizon'],
-    [String(schoolWeeks), 'weeks with school holidays'],
-    [best ? fmtDay(best.start) : '—', best ? `best week · score ${best.scorePct}` : 'no scored week'],
+    [String(state.selected.size), 'mercati scelti'],
+    [fmtPeople(drivePop), `persone entro ${fmtHours(state.maxDrive)} di auto`],
+    [fmtPeople(flyPop), `in più entro ${state.maxFly.toLocaleString('it-IT')} km di volo`],
+    [String(state.events.length), 'date nel periodo'],
+    [String(schoolWeeks), 'settimane con vacanze scolastiche'],
+    [best ? fmtDay(best.start) : '—', best ? `settimana migliore · punteggio ${best.scorePct}` : 'nessuna settimana con punteggio'],
   ];
 
   for (const [value, label] of stats) {
@@ -744,7 +744,7 @@ function monthSpans() {
   while (cursor <= state.to) {
     spans.push({
       value: cursor,
-      label: parseDate(monthStart(cursor)).toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }),
+      label: parseDate(monthStart(cursor)).toLocaleDateString('it-IT', { month: 'short', timeZone: 'UTC' }),
       year: cursor.slice(2, 4),
       start: monthStart(cursor),
       end: monthEnd(cursor),
@@ -759,7 +759,7 @@ function renderTimeline() {
   wrap.textContent = '';
 
   if (!state.selected.size) {
-    wrap.appendChild(el('p', 'view-empty', 'Pick at least one market to see the calendar.'));
+    wrap.appendChild(el('p', 'view-empty', 'Scegli almeno un mercato per vedere il calendario.'));
     return;
   }
 
@@ -788,11 +788,11 @@ function renderTimeline() {
     bar.style.width = `${(7 / totalDays) * 100}%`;
     bar.style.bottom = '0';
     bar.style.height = `${Math.max(2, week.scorePct)}%`;
-    bar.title = `Week of ${fmtDayYear(week.start)} — demand score ${week.scorePct}/100`;
+    bar.title = `Settimana del ${fmtDayYear(week.start)} — punteggio domanda ${week.scorePct}/100`;
     demand.appendChild(bar);
   }
   board.appendChild(demand);
-  board.appendChild(el('div', 'tl-demand-label', 'Weekly demand score — how much of your reachable market is off'));
+  board.appendChild(el('div', 'tl-demand-label', 'Punteggio settimanale della domanda — quanta parte del tuo mercato raggiungibile è ferma'));
 
   // una corsia per mercato, ordinata per peso
   const codes = [...state.selected].sort(
@@ -807,7 +807,7 @@ function renderTimeline() {
     label.append(`${marketFlag(code)} ${marketName(code)} `);
     const reach = state.reach.byCountry.get(code);
     label.appendChild(el('span', 'tl-reach', reach ? fmtPeople(reach.reach) : ''));
-    label.title = `${marketName(code)} — weighted reach ${reach ? fmtPeople(reach.reach) : '0'}`;
+    label.title = `${marketName(code)} — bacino ponderato ${reach ? fmtPeople(reach.reach) : '0'}`;
 
     // Una riga senza barre viola non significa "qui non vanno in vacanza": spesso
     // significa che la fonte non ha ancora pubblicato quel calendario scolastico.
@@ -854,10 +854,10 @@ function renderTimeline() {
 
   const key = el('div', 'tl-key');
   for (const [cls, text] of [
-    ['k-public', 'public holiday'],
-    ['k-school', 'school holiday (thinner = fewer regions)'],
-    ['k-bridge', 'long weekend / bridge day'],
-    ['k-demand', 'weekly demand score'],
+    ['k-public', 'festività'],
+    ['k-school', 'vacanza scolastica (più sottile = meno regioni)'],
+    ['k-bridge', 'ponte'],
+    ['k-demand', 'punteggio settimanale'],
   ]) {
     const span = el('span');
     span.appendChild(el('i', `key-swatch ${cls}`));
@@ -878,16 +878,16 @@ function schoolGapFor(code) {
   if (!market) return null;
   if (state.events.some((ev) => ev.c === code && ev.type === 'school')) return null;
   if (!market.school.length) {
-    return `No school-holiday data is published for ${marketName(code)} — public holidays only.`;
+    return `Per ${marketName(code)} non esistono dati sulle vacanze scolastiche: solo festività nazionali.`;
   }
-  return `School dates for ${marketName(code)} are not published this far ahead yet. Public holidays are complete.`;
+  return `Le date scolastiche di ${marketName(code)} non sono ancora pubblicate così avanti. Le festività invece sono complete.`;
 }
 
 function tooltipFor(ev) {
   const when = ev.start === ev.end ? fmtDayYear(ev.start) : `${fmtDayYear(ev.start)} → ${fmtDayYear(ev.end)}`;
   const who = ev.regions.length
-    ? `${ev.regions.length} region${ev.regions.length > 1 ? 's' : ''}: ${ev.regions.slice(0, 8).join(', ')}${ev.regions.length > 8 ? '…' : ''}`
-    : 'nationwide';
+    ? `${ev.regions.length} region${ev.regions.length > 1 ? 'i' : 'e'}: ${ev.regions.slice(0, 8).join(', ')}${ev.regions.length > 8 ? '…' : ''}`
+    : 'tutto il paese';
   return `${marketName(ev.c)} · ${ev.type}\n${ev.name}\n${when}\n${who}`;
 }
 
@@ -899,7 +899,7 @@ function renderWeekCards() {
   const best = topWeeks(state.weeks, TOP_WEEKS);
 
   if (!best.length) {
-    box.appendChild(el('p', 'view-empty', 'No scored weeks in this horizon.'));
+    box.appendChild(el('p', 'view-empty', 'Nessuna settimana con punteggio in questo periodo.'));
     return;
   }
 
@@ -916,15 +916,15 @@ function renderWeekCards() {
 
     const who = el('p', 'wk-who');
     if (off.length) {
-      who.append('Off: ');
+      who.append('Fermi: ');
       off.forEach(([code, cell], i) => {
-        const label = cell.schoolCoverage > 0 ? `${Math.round(cell.schoolCoverage * 100)}% schools` : cell.bridge ? 'long weekend' : 'holiday';
+        const label = cell.schoolCoverage > 0 ? `${Math.round(cell.schoolCoverage * 100)}% scuole` : cell.bridge ? 'ponte' : 'festività';
         const strong = el('b', null, `${marketFlag(code)} ${marketName(code)}`);
         who.appendChild(strong);
         who.append(` (${label})${i < off.length - 1 ? ', ' : ''}`);
       });
     } else {
-      who.append('Nothing scheduled.');
+      who.append('Niente in programma.');
     }
     card.appendChild(who);
 
@@ -939,7 +939,7 @@ function renderWeekCards() {
  * nessuno. Conta chi porta il valore, non quanti sono in vacanza.
  */
 function weekAdvice(week, off) {
-  if (!off.length) return 'Nothing scheduled — a week to fill with something other than holidays.';
+  if (!off.length) return 'Niente in programma: settimana da riempire con qualcosa che non siano le vacanze.';
 
   const total = off.reduce((sum, [, cell]) => sum + cell.value, 0) || 1;
   const [topCode, topCell] = off[0];
@@ -947,33 +947,36 @@ function weekAdvice(week, off) {
   const strong = off.filter(([, cell]) => cell.intensity >= 0.5).length;
 
   if (share >= 0.5) {
-    return `${marketName(topCode)} alone drives this week — worth a campaign aimed at it specifically.`;
+    return `Questa settimana la traina da solo un mercato: ${marketName(topCode)}. Vale una campagna mirata.`;
   }
   if (strong >= 4) {
-    return `${strong} markets are properly off at once — hold your rate here rather than discount.`;
+    return `${strong} mercati sono fermi insieme: qui tieni la tariffa invece di scontare.`;
   }
   if (strong >= 2) {
-    return `${strong} markets overlap — good week for a minimum-stay rule.`;
+    return `${strong} mercati si sovrappongono: buona settimana per imporre un soggiorno minimo.`;
   }
-  return 'Partial holidays only — closer to a normal week than it looks.';
+  return 'Solo vacanze parziali: assomiglia a una settimana normale più di quanto sembri.';
 }
 
 /* -- elenco date -- */
 
 const MAX_LIST_ROWS = 500;
 
+/** Le etichette dei tipi di evento mostrate all'utente. */
+const TYPE_LABEL = { public: 'festività', school: 'scuole', bridge: 'ponte' };
+
 function renderList() {
   const view = $('#view-list');
   view.textContent = '';
   if (!state.events.length) {
-    view.appendChild(el('p', 'view-empty', 'No dates in this horizon for the selected markets.'));
+    view.appendChild(el('p', 'view-empty', 'Nessuna data in questo periodo per i mercati scelti.'));
     return;
   }
 
   const table = el('table', 'data');
   const thead = el('thead');
   const hr = el('tr');
-  ['Market', 'Type', 'Dates', 'Nights', 'What', 'Share off', 'Regions'].forEach((h) => hr.appendChild(el('th', null, h)));
+  ['Mercato', 'Tipo', 'Date', 'Notti', 'Cosa', 'Quota ferma', 'Regioni'].forEach((h) => hr.appendChild(el('th', null, h)));
   thead.appendChild(hr);
   table.appendChild(thead);
 
@@ -983,13 +986,13 @@ function renderList() {
     const tr = el('tr');
     tr.appendChild(el('td', null, `${marketFlag(ev.c)} ${marketName(ev.c)}`));
     const typeCell = el('td');
-    typeCell.appendChild(el('span', `tag tag-${ev.type}`, ev.type));
+    typeCell.appendChild(el('span', `tag tag-${ev.type}`, TYPE_LABEL[ev.type] || ev.type));
     tr.appendChild(typeCell);
     tr.appendChild(el('td', 'nowrap', ev.start === ev.end ? fmtDay(ev.start) : `${fmtDay(ev.start)} → ${fmtDay(ev.end)}`));
     tr.appendChild(el('td', 'num', ev.nights ? String(ev.nights) : '—'));
     tr.appendChild(el('td', null, ev.name));
     tr.appendChild(el('td', 'num', `${Math.round(ev.coverage * 100)}%`));
-    tr.appendChild(el('td', 'regions', ev.regions.length ? ev.regions.join(', ') : 'nationwide'));
+    tr.appendChild(el('td', 'regions', ev.regions.length ? ev.regions.join(', ') : 'tutto il paese'));
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
@@ -997,7 +1000,7 @@ function renderList() {
 
   if (rows.length > MAX_LIST_ROWS) {
     view.appendChild(
-      el('p', 'note', `Showing the first ${MAX_LIST_ROWS} of ${rows.length} dates — the export contains all of them.`),
+      el('p', 'note', `Mostro le prime ${MAX_LIST_ROWS} date su ${rows.length} — l'esportazione le contiene tutte.`),
     );
   }
 }
@@ -1012,7 +1015,7 @@ function renderMarkets() {
     .filter((m) => m.access !== 'out' || state.selected.has(m.c))
     .sort((a, b) => b.reach - a.reach);
   if (!rows.length) {
-    view.appendChild(el('p', 'view-empty', 'Widen the radius to pick up markets.'));
+    view.appendChild(el('p', 'view-empty', 'Allarga il raggio per intercettare dei mercati.'));
     return;
   }
   const maxReach = rows[0].reach || 1;
@@ -1020,7 +1023,7 @@ function renderMarkets() {
   const table = el('table', 'data');
   const thead = el('thead');
   const hr = el('tr');
-  ['Market', 'Nearest city', 'Drive', 'Flight', 'By car', 'By air', 'Weighted reach'].forEach((h) =>
+  ['Mercato', 'Città più vicina', 'Auto', 'Aereo', 'In auto', 'In aereo', 'Bacino ponderato'].forEach((h) =>
     hr.appendChild(el('th', null, h)),
   );
   thead.appendChild(hr);
@@ -1054,9 +1057,9 @@ function renderMarkets() {
     el(
       'p',
       'note',
-      'Weighted reach discounts people by how hard it is for them to come: someone two hours away counts almost fully, ' +
-        `someone eight hours away about a fifth, and someone who has to fly at most ${Math.round(FLY_WEIGHT * 100)}%. ` +
-        'It ranks markets against each other — it is not a forecast of bookings.',
+      'Il bacino ponderato sconta le persone in base a quanto è faticoso raggiungerti: chi sta a due ore conta quasi per intero, ' +
+        `chi sta a otto ore conta circa un quinto, e chi deve volare conta al massimo il ${Math.round(FLY_WEIGHT * 100)}%. ` +
+        'Serve a ordinare i mercati fra loro, non è una previsione di prenotazioni.',
     ),
   );
 }
@@ -1089,7 +1092,7 @@ function buildRows() {
 function exportAs(format) {
   if (!state.unlocked) return;
   const rows = buildRows();
-  if (!rows.length) return showError('Nothing to export yet.');
+  if (!rows.length) return showError('Non c\'è ancora niente da esportare.');
   const name = `holiday-radar-${slug(state.property.label)}-${state.from}-to-${state.to}`;
 
   if (format === 'csv') download(`${name}.csv`, toCSV(rows), 'text/csv');
@@ -1155,7 +1158,7 @@ function applySaved(saved) {
   if (Number.isFinite(saved.fly)) {
     state.maxFly = saved.fly;
     $('#fly-range').value = String(saved.fly);
-    $('#fly-out').textContent = saved.fly ? `${saved.fly.toLocaleString('en-GB')} km` : 'off';
+    $('#fly-out').textContent = saved.fly ? `${saved.fly.toLocaleString('it-IT')} km` : 'spento';
   }
   if (saved.from) {
     state.from = saved.from;
@@ -1174,7 +1177,7 @@ function readStateFromURL() {
   const lon = Number(params.get('lon'));
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || (!lat && !lon)) return null;
   const saved = {
-    label: params.get('label') || 'Saved property',
+    label: params.get('label') || 'Casa salvata',
     detail: '',
     lat,
     lon,
@@ -1212,7 +1215,7 @@ function readStateFromStorage() {
 function setBusy(busy, message) {
   const btn = $('#search-btn');
   btn.disabled = busy;
-  btn.textContent = busy ? message || 'Working…' : 'Go';
+  btn.textContent = busy ? message || 'Attendo…' : 'Vai';
   if (busy) {
     btn.prepend(el('i', 'spinner'));
     showError(null);
