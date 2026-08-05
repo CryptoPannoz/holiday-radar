@@ -424,12 +424,22 @@ function drawCities() {
 
 function fitMap() {
   if (!map) return;
-  const bounds = layers.drive?.getBounds?.();
-  const flyBounds = layers.fly?.getBounds?.();
-  let target = bounds;
-  if (flyBounds) target = target ? target.extend(flyBounds) : flyBounds;
-  if (target?.isValid?.()) map.fitBounds(target.pad(0.06));
-  setTimeout(() => map.invalidateSize(), 60);
+
+  const apply = () => {
+    // invalidateSize PRIMA di inquadrare: se il contenitore non ha ancora le sue
+    // dimensioni definitive, Leaflet calcola lo zoom su una misura sbagliata e la
+    // mappa resta sullo zoom del mondo con i raggi grandi come una moneta.
+    map.invalidateSize();
+    const target = layers.drive?.getBounds?.() || null;
+    const flyBounds = layers.fly?.getBounds?.() || null;
+    const bounds = target && flyBounds ? target.extend(flyBounds) : target || flyBounds;
+    if (bounds?.isValid?.()) map.fitBounds(bounds.pad(0.06));
+  };
+
+  apply();
+  // Secondo tentativo dopo il rendering: copre l'apertura della stepbar, i font
+  // che arrivano tardi e le finestre ridimensionate mentre si calcolava.
+  setTimeout(apply, 150);
 }
 
 /* ---------- ricerca indirizzo ---------- */
